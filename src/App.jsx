@@ -1,278 +1,407 @@
 import React, { useState } from 'react';
-import { Search, AlertCircle, CheckCircle, XCircle, Download, Code, Loader, Copy, Check, Sparkles, FileText } from 'lucide-react';
+import { Search, AlertCircle, CheckCircle, XCircle, Download, Code, Loader, Copy, Check, Sparkles, FileText, Brain, Zap } from 'lucide-react';
 
 export default function App() {
-  const [url, setUrl] = useState('');
   const [html, setHtml] = useState('');
+  const [auditType, setAuditType] = useState('seo');
   const [technicalResults, setTechnicalResults] = useState(null);
   const [strategicReport, setStrategicReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [error, setError] = useState('');
-  const [mode, setMode] = useState('paste');
   const [copiedIndex, setCopiedIndex] = useState(null);
+  const [reportCopied, setReportCopied] = useState(false);
 
-  const analyzeHTML = (htmlContent, sourceUrl = '') => {
-    try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlContent, 'text/html');
+  const analyzeForAEO = (doc) => {
+    const analysis = {
+      auditType: 'AEO',
+      faqSchema: { present: false, count: 0 },
+      howToSchema: { present: false },
+      questionHeaders: { count: 0, examples: [] },
+      directAnswers: { count: 0, examples: [] },
+      lists: { numbered: 0, bulleted: 0 },
+      tables: { count: 0 },
+      definitionStyle: { present: false },
+      contentStructure: { shortParagraphs: 0, totalParagraphs: 0 },
+      criticalIssues: [],
+      warnings: [],
+      recommendations: [],
+      fixes: []
+    };
+
+    const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+    scripts.forEach(script => {
+      try {
+        const data = JSON.parse(script.textContent);
+        if (data['@type'] === 'FAQPage') {
+          analysis.faqSchema.present = true;
+          analysis.faqSchema.count = data.mainEntity?.length || 0;
+        }
+        if (data['@type'] === 'HowTo') {
+          analysis.howToSchema.present = true;
+        }
+      } catch (e) {}
+    });
+
+    if (!analysis.faqSchema.present) {
+      analysis.criticalIssues.push('No FAQPage schema - AI engines cannot extract Q&A');
+      analysis.fixes.push({
+        priority: 'critical',
+        title: 'Add FAQPage Schema Markup',
+        description: 'Critical for AI answer extraction and featured snippets',
+        code: `<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [{
+    "@type": "Question",
+    "name": "What is your main service?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Provide a clear, concise answer here."
+    }
+  }]
+}
+</script>`,
+        location: 'Add to <head> or before </body>'
+      });
+    }
+
+    const allHeaders = [];
+    for (let i = 1; i <= 6; i++) {
+      doc.querySelectorAll(`h${i}`).forEach(h => {
+        const text = h.textContent.trim();
+        allHeaders.push(text);
+        if (text.match(/^(what|how|why|when|where|who|is|are|can|does|do)\s/i) || text.endsWith('?')) {
+          analysis.questionHeaders.count++;
+          if (analysis.questionHeaders.examples.length < 5) {
+            analysis.questionHeaders.examples.push(text);
+          }
+        }
+      });
+    }
+
+    if (analysis.questionHeaders.count === 0) {
+      analysis.criticalIssues.push('No question-based headers found');
+      analysis.fixes.push({
+        priority: 'critical',
+        title: 'Add Question-Based Headers',
+        description: 'AI engines prioritize content that directly answers questions',
+        code: `<h2>What is [Your Topic]?</h2>
+<p>Provide a direct, concise answer in the first 40-60 words...</p>
+
+<h2>How does [Your Service] work?</h2>
+<p>Step-by-step explanation...</p>
+
+<h2>Why choose [Your Product]?</h2>
+<p>List key benefits...</p>`,
+        location: 'Throughout your content'
+      });
+    } else if (analysis.questionHeaders.count < 3) {
+      analysis.warnings.push(`Only ${analysis.questionHeaders.count} question headers - aim for 5+`);
+    }
+
+    const paragraphs = doc.querySelectorAll('p');
+    paragraphs.forEach((p, idx) => {
+      const text = p.textContent.trim();
+      const wordCount = text.split(/\s+/).length;
       
-      const analysis = {
-        url: sourceUrl,
-        timestamp: new Date().toISOString(),
-        
-        title: {
-          content: doc.querySelector('title')?.textContent || 'MISSING',
-          length: doc.querySelector('title')?.textContent?.length || 0,
-        },
-        
-        meta: {
-          description: doc.querySelector('meta[name="description"]')?.content || 'MISSING',
-          descriptionLength: doc.querySelector('meta[name="description"]')?.content?.length || 0,
-          robots: doc.querySelector('meta[name="robots"]')?.content || 'Not specified',
-          canonical: doc.querySelector('link[rel="canonical"]')?.href || 'MISSING',
-          viewport: doc.querySelector('meta[name="viewport"]')?.content || 'MISSING',
-          charset: doc.querySelector('meta[charset]')?.getAttribute('charset') || 'Not specified',
-          ogTags: {},
-          twitterCards: {}
-        },
-        
-        headers: {
-          h1: [],
-          h2: [],
-          h3: [],
-          h4: [],
-          h5: [],
-          h6: []
-        },
-        
-        images: {
-          total: 0,
-          missingAlt: [],
-          withAlt: 0
-        },
-        
-        links: {
-          internal: [],
-          external: [],
-          nofollow: []
-        },
-        
-        schema: {
-          jsonLd: [],
-          microdata: false
-        },
-        
-        performance: {
-          scriptCount: 0,
-          styleCount: 0,
-        },
-        
-        content: {
-          wordCount: 0,
-          textLength: 0
-        },
-        
-        criticalIssues: [],
-        warnings: [],
-        recommendations: [],
-        fixes: []
-      };
-
-      // Title analysis
-      if (analysis.title.length === 0) {
-        analysis.criticalIssues.push('Missing title tag');
-        analysis.fixes.push({
-          priority: 'critical',
-          title: 'Add Title Tag',
-          description: 'Add a descriptive title tag to the <head> section',
-          code: '<title>Your Page Title Here - Brand Name</title>',
-          location: 'Inside <head> section'
-        });
-      } else if (analysis.title.length < 30) {
-        analysis.warnings.push(`Title too short (${analysis.title.length} chars) - recommend 50-60 chars`);
-      } else if (analysis.title.length > 60) {
-        analysis.warnings.push(`Title too long (${analysis.title.length} chars) - will be truncated`);
-      }
-
-      // Meta description
-      if (analysis.meta.descriptionLength === 0) {
-        analysis.criticalIssues.push('Missing meta description');
-        analysis.fixes.push({
-          priority: 'critical',
-          title: 'Add Meta Description',
-          description: 'Add a compelling meta description (150-160 characters)',
-          code: '<meta name="description" content="Write a compelling description here. Include key benefits. 150-160 characters ideal.">',
-          location: 'Inside <head> section'
-        });
-      } else if (analysis.meta.descriptionLength < 120) {
-        analysis.warnings.push(`Meta description too short (${analysis.meta.descriptionLength} chars)`);
-      } else if (analysis.meta.descriptionLength > 160) {
-        analysis.warnings.push(`Meta description too long (${analysis.meta.descriptionLength} chars)`);
-      }
-
-      if (analysis.meta.canonical === 'MISSING') {
-        analysis.warnings.push('Missing canonical tag');
-        analysis.fixes.push({
-          priority: 'high',
-          title: 'Add Canonical Tag',
-          description: 'Prevent duplicate content issues',
-          code: '<link rel="canonical" href="https://yourdomain.com/page-url/">',
-          location: 'Inside <head> section'
-        });
-      }
-
-      if (analysis.meta.viewport === 'MISSING') {
-        analysis.criticalIssues.push('Missing viewport meta tag - not mobile-optimized');
-        analysis.fixes.push({
-          priority: 'critical',
-          title: 'Add Viewport Meta Tag',
-          description: 'Essential for mobile responsiveness',
-          code: '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
-          location: 'Inside <head> section'
-        });
-      }
-
-      // Open Graph
-      const ogTags = ['og:title', 'og:description', 'og:image', 'og:url', 'og:type'];
-      ogTags.forEach(tag => {
-        const content = doc.querySelector(`meta[property="${tag}"]`)?.content;
-        analysis.meta.ogTags[tag] = content || 'MISSING';
-      });
-      
-      const missingOG = ogTags.filter(tag => analysis.meta.ogTags[tag] === 'MISSING');
-      if (missingOG.length > 0) {
-        analysis.recommendations.push(`Missing Open Graph tags: ${missingOG.join(', ')}`);
-        analysis.fixes.push({
-          priority: 'medium',
-          title: 'Add Open Graph Tags',
-          description: 'Improve social media sharing',
-          code: `<meta property="og:title" content="${analysis.title.content || 'Your Page Title'}">
-<meta property="og:description" content="${analysis.meta.description || 'Description'}">
-<meta property="og:image" content="https://yourdomain.com/image.jpg">
-<meta property="og:url" content="https://yourdomain.com/page/">
-<meta property="og:type" content="website">`,
-          location: 'Inside <head> section'
-        });
-      }
-
-      // Twitter Cards
-      const twitterTags = ['twitter:card', 'twitter:title', 'twitter:description', 'twitter:image'];
-      twitterTags.forEach(tag => {
-        const content = doc.querySelector(`meta[name="${tag}"]`)?.content;
-        analysis.meta.twitterCards[tag] = content || 'MISSING';
-      });
-
-      // Headers
-      for (let i = 1; i <= 6; i++) {
-        const headers = doc.querySelectorAll(`h${i}`);
-        headers.forEach(h => {
-          analysis.headers[`h${i}`].push(h.textContent.trim());
-        });
-      }
-
-      if (analysis.headers.h1.length === 0) {
-        analysis.criticalIssues.push('Missing H1 tag');
-        analysis.fixes.push({
-          priority: 'critical',
-          title: 'Add H1 Heading',
-          description: 'Every page needs exactly one H1',
-          code: '<h1>Your Main Page Heading - Include Keywords</h1>',
-          location: 'Top of main content area'
-        });
-      } else if (analysis.headers.h1.length > 1) {
-        analysis.warnings.push(`Multiple H1 tags found (${analysis.headers.h1.length})`);
-        analysis.fixes.push({
-          priority: 'high',
-          title: 'Fix Multiple H1 Tags',
-          description: 'Keep only one H1, convert others to H2',
-          code: `<h1>${analysis.headers.h1[0]}</h1>\n${analysis.headers.h1.slice(1).map(h => `<h2>${h}</h2>`).join('\n')}`,
-          location: 'Throughout page content'
-        });
-      }
-
-      // Images
-      const images = doc.querySelectorAll('img');
-      analysis.images.total = images.length;
-      images.forEach(img => {
-        if (!img.alt || img.alt.trim() === '') {
-          analysis.images.missingAlt.push(img.src || 'Unknown');
-        } else {
-          analysis.images.withAlt++;
+      if (wordCount >= 40 && wordCount <= 60) {
+        analysis.directAnswers.count++;
+        if (analysis.directAnswers.examples.length < 3) {
+          analysis.directAnswers.examples.push(text.substring(0, 100) + '...');
         }
-      });
-
-      if (analysis.images.missingAlt.length > 0) {
-        analysis.warnings.push(`${analysis.images.missingAlt.length} images missing ALT text`);
-        analysis.fixes.push({
-          priority: 'high',
-          title: 'Add ALT Text to Images',
-          description: `${analysis.images.missingAlt.length} images need ALT attributes`,
-          code: `<img src="your-image.jpg" alt="Descriptive text here">\n\n<!-- Examples needing ALT: -->\n${analysis.images.missingAlt.slice(0, 3).map(src => `<img src="${src}" alt="DESCRIPTION">`).join('\n')}`,
-          location: 'Add alt="" to each <img> tag'
-        });
       }
 
-      // Links
-      const links = doc.querySelectorAll('a[href]');
-      links.forEach(link => {
-        const href = link.href;
-        if (href.startsWith('/') || href.startsWith('#')) {
-          analysis.links.internal.push(href);
-        } else if (href.startsWith('http')) {
-          analysis.links.external.push(href);
-        }
-      });
+      if (wordCount <= 100) {
+        analysis.contentStructure.shortParagraphs++;
+      }
+      analysis.contentStructure.totalParagraphs++;
+    });
 
-      // Schema
-      const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
-      scripts.forEach(script => {
-        try {
-          const data = JSON.parse(script.textContent);
-          analysis.schema.jsonLd.push(data);
-        } catch (e) {
-          analysis.warnings.push('Invalid JSON-LD found');
-        }
+    if (analysis.directAnswers.count === 0) {
+      analysis.warnings.push('No concise answer paragraphs (40-60 words) found');
+      analysis.fixes.push({
+        priority: 'high',
+        title: 'Add Direct Answer Paragraphs',
+        description: 'AI engines extract 40-60 word answers for featured snippets',
+        code: `<h2>What is [Topic]?</h2>
+<p>[Topic] is a [concise definition in 40-60 words]. This direct answer format helps AI engines extract and cite your content. Keep it clear, specific, and self-contained.</p>`,
+        location: 'After each question-based header'
       });
+    }
 
-      if (analysis.schema.jsonLd.length === 0) {
-        analysis.criticalIssues.push('No structured data (Schema.org) found');
-        analysis.fixes.push({
-          priority: 'critical',
-          title: 'Add Schema.org Structured Data',
-          description: 'Enable rich results in search',
-          code: `<script type="application/ld+json">
+    analysis.lists.numbered = doc.querySelectorAll('ol').length;
+    analysis.lists.bulleted = doc.querySelectorAll('ul').length;
+
+    if (analysis.lists.numbered + analysis.lists.bulleted < 2) {
+      analysis.warnings.push('Few or no lists - AI engines prioritize structured content');
+      analysis.fixes.push({
+        priority: 'medium',
+        title: 'Add Structured Lists',
+        description: 'Lists help AI engines extract step-by-step information',
+        code: `<h3>How to [Do Something]:</h3>
+<ol>
+  <li>First step with clear action</li>
+  <li>Second step with specific details</li>
+  <li>Third step with expected outcome</li>
+</ol>
+
+<h3>Key Benefits:</h3>
+<ul>
+  <li>Benefit one with explanation</li>
+  <li>Benefit two with data point</li>
+  <li>Benefit three with use case</li>
+</ul>`,
+        location: 'Throughout content'
+      });
+    }
+
+    analysis.tables.count = doc.querySelectorAll('table').length;
+
+    if (analysis.tables.count === 0) {
+      analysis.recommendations.push('No comparison tables - great for AI extraction');
+      analysis.fixes.push({
+        priority: 'medium',
+        title: 'Add Comparison Tables',
+        description: 'Tables enable AI engines to extract structured comparisons',
+        code: `<table>
+  <thead>
+    <tr>
+      <th>Feature</th>
+      <th>Option A</th>
+      <th>Option B</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Price</td>
+      <td>$99/mo</td>
+      <td>$199/mo</td>
+    </tr>
+    <tr>
+      <td>Users</td>
+      <td>Up to 10</td>
+      <td>Unlimited</td>
+    </tr>
+  </tbody>
+</table>`,
+        location: 'In comparison or pricing sections'
+      });
+    }
+
+    const firstP = doc.querySelector('p');
+    if (firstP) {
+      const text = firstP.textContent.trim();
+      if (text.match(/^.+\s+is\s+/i) || text.match(/^.+\s+refers to\s+/i)) {
+        analysis.definitionStyle.present = true;
+      }
+    }
+
+    if (!analysis.definitionStyle.present) {
+      analysis.warnings.push('No definition-style opening');
+      analysis.fixes.push({
+        priority: 'high',
+        title: 'Add Definition-Style Content',
+        description: 'AI engines prioritize clear definitions for informational queries',
+        code: `<h1>What is [Your Topic]?</h1>
+<p>[Your Topic] is [a clear definition that AI can extract]. It [key characteristic or purpose]. This [benefit or use case].</p>`,
+        location: 'Top of main content'
+      });
+    }
+
+    if (!analysis.howToSchema.present && (allHeaders.some(h => h.toLowerCase().includes('how to')))) {
+      analysis.warnings.push('HowTo content detected but no HowTo schema');
+      analysis.fixes.push({
+        priority: 'high',
+        title: 'Add HowTo Schema',
+        description: 'Essential for step-by-step content in AI results',
+        code: `<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to [Do Something]",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Step 1",
+      "text": "First step description"
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Step 2",
+      "text": "Second step description"
+    }
+  ]
+}
+</script>`,
+        location: 'In <head> or before </body>'
+      });
+    }
+
+    const shortParaRatio = analysis.contentStructure.totalParagraphs > 0 
+      ? (analysis.contentStructure.shortParagraphs / analysis.contentStructure.totalParagraphs) * 100 
+      : 0;
+
+    if (shortParaRatio < 60) {
+      analysis.recommendations.push(`Only ${Math.round(shortParaRatio)}% short paragraphs - aim for 60%+`);
+      analysis.fixes.push({
+        priority: 'medium',
+        title: 'Break Up Long Paragraphs',
+        description: 'AI engines prefer scannable, concise content',
+        code: `<!-- BEFORE: Long paragraph -->
+<p>This is a very long paragraph with multiple ideas that makes it hard for AI to extract specific information and it goes on and on without clear structure...</p>
+
+<!-- AFTER: Short, focused paragraphs -->
+<p>First key idea in 2-3 sentences.</p>
+<p>Second key idea with supporting detail.</p>
+<p>Third key idea with clear takeaway.</p>`,
+        location: 'Break long paragraphs throughout content'
+      });
+    }
+
+    return analysis;
+  };
+
+  const analyzeForSEO = (doc) => {
+    const analysis = {
+      auditType: 'SEO',
+      title: {
+        content: doc.querySelector('title')?.textContent || 'MISSING',
+        length: doc.querySelector('title')?.textContent?.length || 0,
+      },
+      meta: {
+        description: doc.querySelector('meta[name="description"]')?.content || 'MISSING',
+        descriptionLength: doc.querySelector('meta[name="description"]')?.content?.length || 0,
+        canonical: doc.querySelector('link[rel="canonical"]')?.href || 'MISSING',
+        viewport: doc.querySelector('meta[name="viewport"]')?.content || 'MISSING',
+      },
+      headers: { h1: [], h2: [], h3: [] },
+      images: { total: 0, missingAlt: [], withAlt: 0 },
+      schema: { jsonLd: [], microdata: false },
+      content: { wordCount: 0 },
+      criticalIssues: [],
+      warnings: [],
+      recommendations: [],
+      fixes: []
+    };
+
+    if (analysis.title.length === 0) {
+      analysis.criticalIssues.push('Missing title tag');
+      analysis.fixes.push({
+        priority: 'critical',
+        title: 'Add Title Tag',
+        description: 'Essential for search engine rankings',
+        code: '<title>Your Page Title - Brand Name (50-60 chars)</title>',
+        location: 'Inside <head> section'
+      });
+    }
+
+    if (analysis.meta.descriptionLength === 0) {
+      analysis.criticalIssues.push('Missing meta description');
+      analysis.fixes.push({
+        priority: 'critical',
+        title: 'Add Meta Description',
+        description: 'Improves click-through rate from search results',
+        code: '<meta name="description" content="Compelling description 150-160 characters.">',
+        location: 'Inside <head> section'
+      });
+    }
+
+    if (analysis.meta.viewport === 'MISSING') {
+      analysis.criticalIssues.push('Missing viewport meta tag');
+      analysis.fixes.push({
+        priority: 'critical',
+        title: 'Add Viewport Tag',
+        description: 'Required for mobile-friendly sites',
+        code: '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+        location: 'Inside <head> section'
+      });
+    }
+
+    for (let i = 1; i <= 3; i++) {
+      doc.querySelectorAll(`h${i}`).forEach(h => {
+        analysis.headers[`h${i}`].push(h.textContent.trim());
+      });
+    }
+
+    if (analysis.headers.h1.length === 0) {
+      analysis.criticalIssues.push('Missing H1 tag');
+      analysis.fixes.push({
+        priority: 'critical',
+        title: 'Add H1 Heading',
+        description: 'Every page needs exactly one H1 with primary keyword',
+        code: '<h1>Your Main Page Heading With Primary Keyword</h1>',
+        location: 'Top of main content'
+      });
+    }
+
+    const images = doc.querySelectorAll('img');
+    analysis.images.total = images.length;
+    images.forEach(img => {
+      if (!img.alt || img.alt.trim() === '') {
+        analysis.images.missingAlt.push(img.src || 'Unknown');
+      } else {
+        analysis.images.withAlt++;
+      }
+    });
+
+    if (analysis.images.missingAlt.length > 0) {
+      analysis.warnings.push(`${analysis.images.missingAlt.length} images missing ALT text`);
+      analysis.fixes.push({
+        priority: 'high',
+        title: 'Add ALT Text to Images',
+        description: 'Improves accessibility and image SEO',
+        code: `<img src="your-image.jpg" alt="Descriptive text about the image">`,
+        location: 'Every <img> tag'
+      });
+    }
+
+    const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+    scripts.forEach(script => {
+      try {
+        analysis.schema.jsonLd.push(JSON.parse(script.textContent));
+      } catch (e) {}
+    });
+
+    if (analysis.schema.jsonLd.length === 0) {
+      analysis.criticalIssues.push('No structured data found');
+      analysis.fixes.push({
+        priority: 'critical',
+        title: 'Add Schema.org Markup',
+        description: 'Enables rich results in search',
+        code: `<script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Organization",
   "name": "Your Company",
-  "url": "https://yourdomain.com",
-  "logo": "https://yourdomain.com/logo.png",
-  "contactPoint": {
-    "@type": "ContactPoint",
-    "telephone": "+1-555-555-5555",
-    "contactType": "customer service"
-  }
+  "url": "https://yourdomain.com"
 }
 </script>`,
-          location: 'Inside <head> or before </body>'
-        });
+        location: 'In <head> or before </body>'
+      });
+    }
+
+    const bodyText = doc.body?.textContent || '';
+    analysis.content.wordCount = bodyText.trim().split(/\s+/).filter(w => w.length > 0).length;
+
+    if (analysis.content.wordCount < 300) {
+      analysis.warnings.push(`Low word count (${analysis.content.wordCount} words)`);
+    }
+
+    return analysis;
+  };
+
+  const analyzeHTML = (htmlContent) => {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlContent, 'text/html');
+      
+      if (auditType === 'aeo') {
+        return analyzeForAEO(doc);
+      } else {
+        return analyzeForSEO(doc);
       }
-
-      // Performance
-      analysis.performance.scriptCount = doc.querySelectorAll('script[src]').length;
-      analysis.performance.styleCount = doc.querySelectorAll('link[rel="stylesheet"]').length;
-
-      // Content
-      const bodyText = doc.body?.textContent || '';
-      analysis.content.textLength = bodyText.length;
-      analysis.content.wordCount = bodyText.trim().split(/\s+/).filter(w => w.length > 0).length;
-
-      if (analysis.content.wordCount < 300) {
-        analysis.warnings.push(`Low word count (${analysis.content.wordCount} words)`);
-      }
-
-      return analysis;
     } catch (err) {
       throw new Error(`Error parsing HTML: ${err.message}`);
     }
@@ -283,76 +412,47 @@ export default function App() {
     setError('');
 
     try {
-      const prompt = `You are an expert SEO strategist analyzing technical audit findings for a website. Based on the technical data below, generate a comprehensive strategic SEO report.
+      const auditTypeName = auditType === 'aeo' ? 'AEO (Answer Engine Optimization)' : 'SEO (Search Engine Optimization)';
+      const prompt = `You are an expert ${auditTypeName} strategist analyzing technical audit findings. Based on the data below, generate a comprehensive strategic report.
 
 TECHNICAL AUDIT FINDINGS:
 ${JSON.stringify(technicalResults, null, 2)}
 
-Generate a strategic report with the following sections:
+Generate a strategic ${auditTypeName} report with:
 
-1. **Executive Summary** (2-3 paragraphs)
-   - Overall SEO health score (1-10)
-   - Top 3 critical findings
-   - Projected impact of implementing fixes
+1. **Executive Summary** - Overall health score (1-10), top 3 critical findings, projected impact
+2. **Business Impact Analysis** - How issues affect traffic/conversions, competitive implications, risks
+3. **Prioritized Action Plan** - Week 1 (critical), Weeks 2-4 (high priority), Months 2-3 (strategic)
+4. **ROI Projections** - Expected improvements, timeline, resources needed
+5. **Competitive Positioning** - Industry comparison, opportunities, strengths/weaknesses
+6. **Strategic Recommendations** - Content strategy, technical architecture, long-term roadmap
 
-2. **Business Impact Analysis**
-   - How these issues affect traffic, conversions, and revenue
-   - Competitive implications
-   - Risk assessment
+${auditType === 'aeo' ? 'Focus on AI-powered search engines (ChatGPT, Perplexity, Google AI Overviews, Bing Chat) and how to optimize for answer extraction and citations.' : 'Focus on traditional search engines (Google, Bing) and ranking factors.'}
 
-3. **Prioritized Action Plan**
-   - Week 1 (Critical fixes)
-   - Weeks 2-4 (High priority)
-   - Months 2-3 (Strategic improvements)
-   - Each with specific actions, estimated time, and expected impact
-
-4. **ROI Projections**
-   - Expected traffic improvement (%)
-   - Timeline to see results
-   - Resource requirements
-
-5. **Competitive Positioning**
-   - How these issues compare to industry standards
-   - Opportunities to outrank competitors
-   - Areas where the site excels or falls behind
-
-6. **Strategic Recommendations**
-   - Content strategy implications
-   - Technical architecture suggestions
-   - Long-term SEO roadmap
-
-Format the response in clean, professional markdown with headers, bullet points, and clear sections. Be specific, actionable, and data-driven.`;
+Format in clean markdown with headers, bullets, and clear sections. Be specific and actionable.`;
 
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 4000,
-          messages: [
-            { role: "user", content: prompt }
-          ]
+          messages: [{ role: "user", content: prompt }]
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
 
       const data = await response.json();
-      const reportText = data.content[0].text;
-      
-      setStrategicReport(reportText);
+      setStrategicReport(data.content[0].text);
     } catch (err) {
-      setError(`Failed to generate strategic report: ${err.message}`);
+      setError(`Failed to generate report: ${err.message}`);
     } finally {
       setGeneratingReport(false);
     }
   };
 
-  const handleAnalyzeHTML = () => {
+  const handleAnalyze = () => {
     if (!html.trim()) {
       setError('Please paste HTML to analyze');
       return;
@@ -365,7 +465,7 @@ Format the response in clean, professional markdown with headers, bullet points,
 
     setTimeout(() => {
       try {
-        const analysis = analyzeHTML(html, 'Pasted HTML');
+        const analysis = analyzeHTML(html);
         setTechnicalResults(analysis);
       } catch (err) {
         setError(`Error: ${err.message}`);
@@ -382,44 +482,64 @@ Format the response in clean, professional markdown with headers, bullet points,
     });
   };
 
+  const copyReport = () => {
+    navigator.clipboard.writeText(strategicReport).then(() => {
+      setReportCopied(true);
+      setTimeout(() => setReportCopied(false), 2000);
+    });
+  };
+
   const exportTechnical = () => {
-    const dataStr = JSON.stringify(technicalResults, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `technical-audit-${Date.now()}.json`;
-    link.click();
+    try {
+      const blob = new Blob([JSON.stringify(technicalResults, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${auditType}-audit-${Date.now()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(`Export failed: ${err.message}`);
+    }
   };
 
   const exportStrategic = () => {
-    const blob = new Blob([strategicReport], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `strategic-seo-report-${Date.now()}.md`;
-    link.click();
+    try {
+      const blob = new Blob([strategicReport], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${auditType}-report-${Date.now()}.md`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(`Export failed: ${err.message}`);
+    }
   };
 
   const FixCard = ({ fix, index }) => {
-    const priorityColors = {
+    const colors = {
       critical: 'border-red-300 bg-red-50',
       high: 'border-orange-300 bg-orange-50',
       medium: 'border-yellow-300 bg-yellow-50',
     };
 
-    const priorityBadges = {
+    const badges = {
       critical: 'bg-red-600 text-white',
       high: 'bg-orange-600 text-white',
       medium: 'bg-yellow-600 text-white',
     };
 
     return (
-      <div className={`border-2 rounded-xl p-5 ${priorityColors[fix.priority]}`}>
+      <div className={`border-2 rounded-xl p-5 ${colors[fix.priority]}`}>
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${priorityBadges[fix.priority]}`}>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${badges[fix.priority]}`}>
                 {fix.priority}
               </span>
               <h4 className="font-bold text-gray-900">{fix.title}</h4>
@@ -454,18 +574,63 @@ Format the response in clean, professional markdown with headers, bullet points,
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-2xl shadow-2xl p-8 mb-8">
-          {/* Header */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-3 mb-4">
               <Sparkles className="w-12 h-12 text-purple-600" />
               <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Ultimate SEO Audit Tool
+                C&L Page Audit Tool
               </h1>
             </div>
-            <p className="text-gray-600 text-lg">Technical Precision + Strategic Intelligence = SEO Dominance</p>
+            <p className="text-gray-600 text-lg">Technical Precision + Strategic Intelligence</p>
           </div>
 
-          {/* Input */}
+          <div className="flex gap-4 mb-6 justify-center">
+            <button
+              onClick={() => {
+                setAuditType('seo');
+                setTechnicalResults(null);
+                setStrategicReport(null);
+              }}
+              className={`flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg ${
+                auditType === 'seo'
+                  ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <Search className="w-6 h-6" />
+              SEO Audit
+            </button>
+            <button
+              onClick={() => {
+                setAuditType('aeo');
+                setTechnicalResults(null);
+                setStrategicReport(null);
+              }}
+              className={`flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg ${
+                auditType === 'aeo'
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <Brain className="w-6 h-6" />
+              AEO Audit
+            </button>
+          </div>
+
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl p-4 mb-6">
+            <p className="text-sm text-gray-700">
+              {auditType === 'seo' ? (
+                <>
+                  <strong>SEO Mode:</strong> Analyzes traditional search engine optimization - title tags, meta descriptions, headers, schema markup, and technical SEO factors.
+                </>
+              ) : (
+                <>
+                  <strong>AEO Mode:</strong> Analyzes Answer Engine Optimization for AI-powered search (ChatGPT, Perplexity, Google AI Overviews) - FAQ schema, question-based content, direct answers, and AI-friendly structure.
+                </>
+              )}
+            </p>
+          </div>
+
           <div className="mb-8">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Paste HTML Source Code
@@ -481,7 +646,7 @@ Format the response in clean, professional markdown with headers, bullet points,
                 {html.length > 0 ? `${html.length.toLocaleString()} characters` : 'Ready for HTML...'}
               </p>
               <button
-                onClick={handleAnalyzeHTML}
+                onClick={handleAnalyze}
                 disabled={loading || !html.trim()}
                 className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition shadow-lg"
               >
@@ -492,8 +657,8 @@ Format the response in clean, professional markdown with headers, bullet points,
                   </>
                 ) : (
                   <>
-                    <Search className="w-5 h-5" />
-                    Analyze
+                    {auditType === 'seo' ? <Search className="w-5 h-5" /> : <Brain className="w-5 h-5" />}
+                    Analyze {auditType.toUpperCase()}
                   </>
                 )}
               </button>
@@ -510,11 +675,12 @@ Format the response in clean, professional markdown with headers, bullet points,
           )}
         </div>
 
-        {/* Technical Results */}
         {technicalResults && (
           <div className="bg-white rounded-2xl shadow-2xl p-8 mb-8">
             <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">⚡ Technical Audit Results</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                {auditType === 'seo' ? '⚡ SEO' : '🧠 AEO'} Technical Results
+              </h2>
               <div className="flex gap-3">
                 <button
                   onClick={exportTechnical}
@@ -543,7 +709,6 @@ Format the response in clean, professional markdown with headers, bullet points,
               </div>
             </div>
 
-            {/* Summary Cards */}
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
@@ -568,27 +733,50 @@ Format the response in clean, professional markdown with headers, bullet points,
               </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <h3 className="font-bold mb-3">Content Metrics</h3>
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-semibold">Word Count:</span> {technicalResults.content.wordCount}</p>
-                  <p><span className="font-semibold">Images:</span> {technicalResults.images.total} ({technicalResults.images.missingAlt.length} missing ALT)</p>
-                  <p><span className="font-semibold">Links:</span> {technicalResults.links.internal.length} internal, {technicalResults.links.external.length} external</p>
+            {auditType === 'aeo' && (
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <h3 className="font-bold mb-3">AEO Content Analysis</h3>
+                  <div className="space-y-2 text-sm">
+                    <p><span className="font-semibold">FAQ Schema:</span> {technicalResults.faqSchema.present ? `✅ ${technicalResults.faqSchema.count} questions` : '❌ Missing'}</p>
+                    <p><span className="font-semibold">Question Headers:</span> {technicalResults.questionHeaders.count} found</p>
+                    <p><span className="font-semibold">Direct Answers (40-60 words):</span> {technicalResults.directAnswers.count}</p>
+                    <p><span className="font-semibold">Lists:</span> {technicalResults.lists.numbered} numbered, {technicalResults.lists.bulleted} bulleted</p>
+                  </div>
+                </div>
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <h3 className="font-bold mb-3">AI-Friendly Structure</h3>
+                  <div className="space-y-2 text-sm">
+                    <p><span className="font-semibold">Tables:</span> {technicalResults.tables.count} found</p>
+                    <p><span className="font-semibold">HowTo Schema:</span> {technicalResults.howToSchema.present ? '✅ Present' : '❌ Missing'}</p>
+                    <p><span className="font-semibold">Definition Style:</span> {technicalResults.definitionStyle.present ? '✅ Present' : '❌ Missing'}</p>
+                    <p><span className="font-semibold">Short Paragraphs:</span> {technicalResults.contentStructure.shortParagraphs}/{technicalResults.contentStructure.totalParagraphs}</p>
+                  </div>
                 </div>
               </div>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <h3 className="font-bold mb-3">Technical</h3>
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-semibold">Schema Markup:</span> {technicalResults.schema.jsonLd.length} found</p>
-                  <p><span className="font-semibold">H1 Tags:</span> {technicalResults.headers.h1.length}</p>
-                  <p><span className="font-semibold">Scripts:</span> {technicalResults.performance.scriptCount}</p>
-                </div>
-              </div>
-            </div>
+            )}
 
-            {/* Fixes */}
+            {auditType === 'seo' && (
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-bold mb-3">Content Metrics</h3>
+                  <div className="space-y-2 text-sm">
+                    <p><span className="font-semibold">Word Count:</span> {technicalResults.content.wordCount}</p>
+                    <p><span className="font-semibold">Images:</span> {technicalResults.images.total} ({technicalResults.images.missingAlt.length} missing ALT)</p>
+                    <p><span className="font-semibold">H1 Tags:</span> {technicalResults.headers.h1.length}</p>
+                  </div>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-bold mb-3">Technical</h3>
+                  <div className="space-y-2 text-sm">
+                    <p><span className="font-semibold">Schema Markup:</span> {technicalResults.schema.jsonLd.length} found</p>
+                    <p><span className="font-semibold">Title:</span> {technicalResults.title.length} chars</p>
+                    <p><span className="font-semibold">Meta Desc:</span> {technicalResults.meta.descriptionLength} chars</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {technicalResults.fixes.length > 0 && (
               <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-300 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-6">
@@ -614,41 +802,55 @@ Format the response in clean, professional markdown with headers, bullet points,
           </div>
         )}
 
-        {/* Strategic Report */}
         {strategicReport && (
           <div className="bg-white rounded-2xl shadow-2xl p-8">
             <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-purple-200">
               <div className="flex items-center gap-3">
                 <FileText className="w-8 h-8 text-purple-600" />
                 <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  Strategic SEO Report
+                  Strategic {auditType.toUpperCase()} Report
                 </h2>
               </div>
-              <button
-                onClick={exportStrategic}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-              >
-                <Download className="w-4 h-4" />
-                Export Report
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={copyReport}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                >
+                  {reportCopied ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      Copy Report
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={exportStrategic}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                >
+                  <Download className="w-4 h-4" />
+                  Download .md
+                </button>
+              </div>
             </div>
             
-            <div className="prose prose-lg max-w-none prose-headings:text-gray-900 prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-gray-700 prose-strong:text-gray-900 prose-ul:text-gray-700">
+            <div className="prose prose-lg max-w-none">
               {strategicReport.split('\n').map((line, i) => {
-                if (line.startsWith('# ')) {
-                  return <h1 key={i} className="text-3xl font-bold mt-8 mb-4">{line.replace('# ', '')}</h1>;
-                } else if (line.startsWith('## ')) {
-                  return <h2 key={i} className="text-2xl font-bold mt-6 mb-3">{line.replace('## ', '')}</h2>;
-                } else if (line.startsWith('### ')) {
-                  return <h3 key={i} className="text-xl font-bold mt-4 mb-2">{line.replace('### ', '')}</h3>;
-                } else if (line.startsWith('**') && line.endsWith('**')) {
-                  return <p key={i} className="font-bold mt-3">{line.replace(/\*\*/g, '')}</p>;
-                } else if (line.startsWith('- ')) {
-                  return <li key={i} className="ml-6">{line.replace('- ', '')}</li>;
-                } else if (line.trim()) {
-                  return <p key={i} className="mb-3">{line}</p>;
+                const trimmed = line.trim();
+                if (!trimmed) return <div key={i} className="h-2"></div>;
+                if (trimmed.startsWith('# ')) return <h1 key={i} className="text-3xl font-bold mt-8 mb-4">{trimmed.replace('# ', '')}</h1>;
+                if (trimmed.startsWith('## ')) return <h2 key={i} className="text-2xl font-bold mt-6 mb-3">{trimmed.replace('## ', '')}</h2>;
+                if (trimmed.startsWith('### ')) return <h3 key={i} className="text-xl font-bold mt-4 mb-2">{trimmed.replace('### ', '')}</h3>;
+                if (trimmed.startsWith('- ')) return <li key={i} className="ml-6 mb-1">{trimmed.replace('- ', '')}</li>;
+                if (trimmed.includes('**')) {
+                  const parts = trimmed.split('**');
+                  return <p key={i} className="mb-3">{parts.map((part, idx) => idx % 2 === 1 ? <strong key={idx}>{part}</strong> : part)}</p>;
                 }
-                return null;
+                return <p key={i} className="mb-3">{trimmed}</p>;
               })}
             </div>
           </div>
