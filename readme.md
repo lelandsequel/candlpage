@@ -1,252 +1,188 @@
-# C&L Page - Ultimate SEO Audit Tool 🚀
+# CandLPage - Client Deliverables Suite
 
-> **Technical Precision + Strategic Intelligence = SEO Dominance**
+Professional audit and content generation tools for C&L Page clients.
 
-A powerful web-based SEO audit tool that combines instant technical HTML analysis with AI-powered strategic business recommendations. Built for digital marketers, SEO professionals, and agencies who demand both speed and depth.
+## Features
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![React](https://img.shields.io/badge/React-18.2.0-61DAFB?logo=react)
-![Vite](https://img.shields.io/badge/Vite-5.0-646CFF?logo=vite)
-![TailwindCSS](https://img.shields.io/badge/Tailwind-3.3-38B2AC?logo=tailwind-css)
+### 1. SEO/AEO Audit Tool
+- Technical SEO analysis from HTML source or URL
+- Answer Engine Optimization (AEO) recommendations
+- Copy-paste fixes for every issue found
+- Strategic report generation via Claude AI
+- Content gap analysis
+- Export results (JSON + Markdown)
+- Score: 0-100 with letter grade (A+ to F)
 
----
+### 2. Cybersecurity Scanner
+- OWASP Top 10 compliance checking
+- Vulnerability detection and CVE identification
+- Security header analysis
+- Copy-paste security fixes and configurations
+- Strategic security report generation via Claude AI
+- Risk scoring (LOW/MEDIUM/HIGH/CRITICAL)
+- Export results (JSON + Markdown)
 
-## ✨ Features
+### 3. Press Release Generator *(Coming Soon)*
+- AEO-optimized press release generation
+- Announcement and authority building content
 
-### ⚡ Instant Technical Analysis
-- **HTML Parser** - Analyzes page source in under 0.5 seconds
-- **50+ Technical Checks** - Title tags, meta descriptions, headers, images, links, schema markup, and more
-- **Priority-Based Issues** - Critical, high, medium, and low severity classification
-- **Real-time Validation** - No server requests needed, all processing happens in-browser
+## Tech Stack
 
-### 🛠️ Ready-to-Implement Fixes
-- **Copy-Paste Code Snippets** - Every issue includes production-ready HTML/code
-- **Syntax-Highlighted Examples** - Easy-to-read code blocks with one-click copying
-- **Location Guidance** - Clear instructions on where to implement each fix
-- **Before/After Context** - See current state and recommended improvements
+- **Frontend:** React 18.2, Vite 5.0
+- **Styling:** Tailwind CSS 3.3
+- **Icons:** Lucide React
+- **Routing:** React Router DOM 7.9
+- **Backend:** Express 5.1, Node.js
+- **AI:** Anthropic Claude API (Sonnet 4 - `claude-sonnet-4-20250514`)
 
-### 🤖 AI-Powered Strategic Reports
-- **Claude Integration** - Leverages Anthropic's Claude Sonnet 4 for deep analysis
-- **Business Impact Assessment** - Understand how technical issues affect revenue and conversions
-- **Prioritized Action Plans** - Week-by-week roadmap with timelines and resource estimates
-- **ROI Projections** - Expected traffic improvements and competitive positioning insights
-- **Export Options** - Download as Markdown or copy to clipboard
-
-### 📊 Comprehensive Auditing
-- **Meta Tag Analysis** - Title, description, canonical, viewport, charset validation
-- **Social Media Optimization** - Open Graph and Twitter Card completeness checks
-- **Header Structure** - H1-H6 hierarchy and SEO best practices
-- **Image SEO** - ALT attribute detection and accessibility compliance
-- **Schema Markup** - JSON-LD structured data detection and recommendations
-- **Content Metrics** - Word count, text length, and content depth analysis
-- **Link Analysis** - Internal vs. external link classification
-
----
-
-## 🚀 Quick Start
+## Setup Instructions
 
 ### Prerequisites
-- Node.js 16+ and npm/yarn
-- Git (for version control)
-- A Vercel or Netlify account (for deployment)
+- Node.js (v18 or higher)
+- npm
+- Anthropic API key
 
 ### Installation
 
+1. **Clone/Navigate to the project:**
+   ```bash
+   cd /Users/sokpyeon/candlpage
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Create `.env` file:**
+   ```bash
+   touch .env
+   ```
+
+4. **Add your Anthropic API key to `.env`:**
+   ```env
+   ANTHROPIC_API_KEY=your_api_key_here
+   VITE_ANTHROPIC_API_KEY=your_api_key_here
+   ```
+
+### Running the Application
+
+You need to run **TWO servers** simultaneously:
+
+#### Terminal 1 - Backend API Server (Port 3001)
 ```bash
-# Clone the repository
-git clone https://github.com/lelandsequel/candlpage.git
-cd candlpage
+npm run server
+```
 
-# Install dependencies
-npm install
-
-# Start development server
+#### Terminal 2 - Frontend Dev Server (Port 5173)
+```bash
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) to see the app.
+Then open your browser to: **http://localhost:5173/**
 
----
-
-## 🛠️ Tech Stack
-
-- **Frontend Framework:** React 18.2
-- **Build Tool:** Vite 5.0
-- **Styling:** Tailwind CSS 3.3
-- **Icons:** Lucide React
-- **AI Integration:** Anthropic Claude API (Sonnet 4)
-- **Language:** JavaScript (ES6+)
-
----
-
-## 📖 Usage
-
-### Basic SEO Audit
-
-1. **Visit any website** you want to audit
-2. **Right-click** on the page → **"View Page Source"** (or press `Ctrl+U` / `Cmd+U`)
-3. **Select all** HTML (`Ctrl+A` / `Cmd+A`) and **copy**
-4. **Paste** into the C&L Page text area
-5. Click **"Analyze"**
-6. Review technical findings and copy-paste fixes
-
-### Generate Strategic Report
-
-After running the technical audit:
-
-1. Click **"Generate Strategic Report"**
-2. Wait 10-30 seconds while Claude analyzes findings
-3. Review comprehensive business strategy, ROI projections, and action plans
-4. **Copy** report to clipboard or **download** as `.md` file
-
-### Export Results
-
-- **Technical Data:** Click "Export JSON" to download machine-readable audit data
-- **Strategic Report:** Click "Download .md" to save strategic analysis as Markdown
-- **Code Fixes:** Click copy button on any fix card to grab ready-to-use code
-
----
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 candlpage/
-├── index.html              # HTML entry point
-├── package.json            # Dependencies and scripts
-├── vite.config.js          # Vite configuration
-├── tailwind.config.js      # Tailwind CSS configuration
-├── postcss.config.js       # PostCSS configuration
-├── .gitignore              # Git ignore rules
-├── README.md               # This file
-└── src/
-    ├── main.jsx            # React entry point
-    ├── App.jsx             # Main application component
-    └── index.css           # Global styles and Tailwind imports
+├── src/
+│   ├── App.jsx                      # Main app with routing and landing page
+│   ├── index.css                    # Global styles
+│   ├── main.jsx                     # React entry point
+│   └── components/
+│       ├── SeoAeoAudit.jsx         # SEO/AEO audit component
+│       ├── SecurityScanner.jsx      # Security audit component
+│       └── PressReleaseGenerator.jsx # Press release tool (WIP)
+├── server.js                        # Express backend for Claude API
+├── package.json                     # Dependencies and scripts
+├── vite.config.js                  # Vite configuration
+├── tailwind.config.js              # Tailwind CSS configuration
+├── .env                            # Environment variables (gitignored)
+└── .gitignore                      # Git ignore rules
 ```
 
----
+## Usage
 
-## 🔧 Development
+### SEO/AEO Audit
+1. Click "SEO/AEO Audit" from the home page
+2. Choose input method: URL or Source Code
+3. Paste HTML source code or enter a URL
+4. Click "Run SEO/AEO Audit"
+5. Review issues with copy-paste fixes
+6. Generate strategic report (optional)
+7. Export results as JSON or Markdown
 
-### Available Scripts
+### Cybersecurity Scanner
+1. Click "Cybersecurity Audit" from the home page
+2. Choose input method: URL or Source Code
+3. Paste HTML source code or enter a URL
+4. Click "Run Security Audit"
+5. Review vulnerabilities with copy-paste remediations
+6. Generate strategic security report (optional)
+7. Export results as JSON or Markdown
+
+## API Configuration
+
+The app uses Claude Sonnet 4 (`claude-sonnet-4-20250514`) for:
+- Generating audit results
+- Creating strategic reports
+- Providing actionable recommendations
+
+All API calls go through the Express backend (`server.js`) to keep your API key secure.
+
+## Building for Production
 
 ```bash
-# Start development server
-npm run dev
-
-# Build for production
 npm run build
-
-# Preview production build locally
-npm run preview
 ```
 
-### Environment Variables
+The production build will be in the `dist/` directory.
 
-No environment variables required! The Claude API integration works directly without API keys (handled by Claude's artifact environment).
+## Deployment to Vercel
 
----
+1. Push your code to GitHub
+2. Import project in Vercel
+3. Add environment variable: `ANTHROPIC_API_KEY`
+4. Deploy!
 
-## 🚢 Deployment
+**Note:** You'll need to configure the backend server separately for production (or use Vercel serverless functions).
 
-### Deploy to Vercel (Recommended)
+## Environment Variables
 
-1. **Push to GitHub:**
-   ```bash
-   git add .
-   git commit -m "Ready for deployment"
-   git push origin main
-   ```
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `ANTHROPIC_API_KEY` | Your Anthropic Claude API key (backend) | Yes |
+| `VITE_ANTHROPIC_API_KEY` | Your Anthropic Claude API key (frontend fallback) | Yes |
 
-2. **Connect to Vercel:**
-   - Go to [vercel.com](https://vercel.com)
-   - Click "New Project"
-   - Import your `lelandsequel/candlpage` repository
-   - Vercel auto-detects Vite configuration
-   - Click "Deploy"
+## Security Notes
 
-3. **Done!** Your app will be live at `candlpage.vercel.app`
+- `.env` file is gitignored by default
+- Never commit your API keys
+- Backend server proxies all Claude API requests
+- CORS is enabled for local development only
 
-### Deploy to Netlify
+## Troubleshooting
 
-1. **Build the project:**
-   ```bash
-   npm run build
-   ```
+### "Error analyzing website"
+- Make sure both servers are running
+- Check that your API key is set in `.env`
+- Verify the backend is running on port 3001
+- Check browser console for detailed errors
 
-2. **Deploy:**
-   - Go to [netlify.com](https://netlify.com)
-   - Drag and drop the `dist` folder
-   - Or connect your GitHub repo for automatic deployments
+### Port already in use
+- Kill any existing processes on ports 3001 or 5173
+- Or change the port in `server.js` or `vite.config.js`
 
-### Custom Domain
+### Dependencies not found
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
 
-Add a custom domain in your Vercel/Netlify dashboard:
-- Vercel: Settings → Domains
-- Netlify: Domain Settings → Add Custom Domain
+## License
 
----
+Proprietary - C&L Page
 
-## 🎯 Use Cases
+## Support
 
-- **Agency Audits** - Quick technical assessments for client websites
-- **Competitive Analysis** - Compare your site against competitors
-- **Pre-Launch Checks** - Validate SEO before going live
-- **Training & Education** - Teach SEO best practices with real examples
-- **Client Reports** - Generate professional audit reports with strategic recommendations
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! This is an open-source tool built for the SEO community.
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 📝 License
-
-This project is licensed under the MIT License - feel free to use it for personal or commercial projects.
-
----
-
-## 🙏 Acknowledgments
-
-- **Anthropic Claude** - AI-powered strategic analysis
-- **React Team** - Amazing frontend framework
-- **Vite** - Lightning-fast build tool
-- **Tailwind CSS** - Beautiful utility-first styling
-- **Lucide** - Clean and consistent iconography
-
----
-
-## 📧 Contact
-
-**Built by Infinity Digital Consulting**
-
-- Website: [infinitydigitalconsulting.com](https://infinitydigitalconsulting.com)
-- GitHub: [@lelandsequel](https://github.com/lelandsequel)
-- Project Link: [github.com/lelandsequel/candlpage](https://github.com/lelandsequel/candlpage)
-
----
-
-## 🔮 Roadmap
-
-- [ ] Bulk URL analysis (multiple pages at once)
-- [ ] Save audit history
-- [ ] PDF export for reports
-- [ ] Competitor comparison mode
-- [ ] Integration with Google Search Console
-- [ ] Custom branding options for agencies
-- [ ] Multi-language support
-
----
-
-**⭐ If you find this tool useful, give it a star on GitHub!**
-
-Made with 🔥 by the team at Infinity Digital Consulting
+For issues or questions, contact the C&L Page development team.
