@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Shield, TrendingUp, Newspaper, Home } from 'lucide-react';
 import SecurityScanner from './components/SecurityScanner';
 import SeoAeoAudit from './components/SeoAeoAudit';
 import PressReleaseGenerator from './components/PressReleaseGenerator';
+import PasswordGate from './components/PasswordGate';
 
 function LandingPage() {
   return (
@@ -10,9 +12,12 @@ function LandingPage() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h1 className="text-6xl font-bold text-white mb-6">
-            C&L Client Services
+            C&L Page
           </h1>
-          <p className="text-xl text-gray-300 mb-12">
+          <p className="text-xl text-gray-300 mb-4">
+            by C&L Strategy
+          </p>
+          <p className="text-lg text-gray-400 mb-12">
             Professional audit and content generation tools
           </p>
         </div>
@@ -72,6 +77,20 @@ function LandingPage() {
 }
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Check if user is already authenticated in this session
+    const authenticated = sessionStorage.getItem('clpage_authenticated');
+    if (authenticated === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  if (!isAuthenticated) {
+    return <PasswordGate onAuthenticate={() => setIsAuthenticated(true)} />;
+  }
+
   return (
     <Router>
       <Routes>

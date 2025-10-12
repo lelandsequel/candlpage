@@ -1,8 +1,15 @@
-# CandLPage - Client Deliverables Suite
+# C&L Page - Client Deliverables Suite
+### by C&L Strategy
 
-Professional audit and content generation tools for C&L Page clients.
+Professional audit and content generation tools for C&L Strategy clients.
 
 ## Features
+
+### 🔒 Password Protection
+- Secure password gate on site entry
+- Session-based authentication (lasts until browser closes)
+- Easy to customize password in `src/components/PasswordGate.jsx`
+- Default password: `GoBrowns333`
 
 ### 1. SEO/AEO Audit Tool
 - Technical SEO analysis from HTML source or URL
@@ -80,6 +87,15 @@ npm run dev
 ```
 
 Then open your browser to: **http://localhost:5173/**
+
+### Default Password
+
+The default password is: **`GoBrowns333`**
+
+To change the password, edit line 9 in `src/components/PasswordGate.jsx`:
+```javascript
+const CORRECT_PASSWORD = 'YourNewPasswordHere';
+```
 
 ## Project Structure
 
@@ -181,8 +197,8 @@ npm install
 
 ## License
 
-Proprietary - C&L Page
+Proprietary - C&L Strategy
 
 ## Support
 
-For issues or questions, contact the C&L Page development team.
+For issues or questions, contact the C&L Strategy development team.
