@@ -415,3 +415,7 @@ Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Report generation error: {str(e)}")
 
+
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(app, host='0.0.0.0', port=5057)
