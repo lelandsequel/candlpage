@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { Shield, TrendingUp, Newspaper, Search, Home } from 'lucide-react';
+import { Shield, TrendingUp, Newspaper, Search, Home, Users } from 'lucide-react';
 import SecurityScanner from './components/SecurityScanner';
 import SeoAeoAudit from './components/SeoAeoAudit';
 import PressReleaseGenerator from './components/PressReleaseGenerator';
 import KeywordGenerator from './components/KeywordGenerator';
+import LeadGenerator from './components/LeadGenerator';
 import PasswordGate from './components/PasswordGate';
 
 function LandingPage() {
@@ -87,6 +88,22 @@ function LandingPage() {
               Launch Tool →
             </div>
           </Link>
+
+          <Link
+            to="/leads"
+            className="group bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105"
+          >
+            <Users className="w-16 h-16 text-orange-400 mb-4" />
+            <h2 className="text-3xl font-bold text-white mb-4">
+              Lead Generator
+            </h2>
+            <p className="text-gray-300 mb-6">
+              Find and score business leads, manual and automated runs
+            </p>
+            <div className="text-orange-400 group-hover:text-orange-300 font-semibold">
+              Launch Tool →
+            </div>
+          </Link>
         </div>
       </div>
     </div>
@@ -116,6 +133,7 @@ function App() {
         <Route path="/seo-aeo" element={<SeoAeoAudit />} />
         <Route path="/press-release" element={<PressReleaseGenerator />} />
         <Route path="/keywords" element={<KeywordGenerator />} />
+        <Route path="/leads" element={<LeadGenerator />} />
       </Routes>
     </Router>
   );
