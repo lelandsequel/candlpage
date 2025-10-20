@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>CandlPage - SEO Suite</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tab-btn { @apply px-4 py-2 rounded transition; }
+    .tab-btn.active { @apply bg-violet-500 text-white; }
+    .tab-btn.inactive { @apply bg-white/10 text-white/70 hover:bg-white/20; }
+    .prose h2 { font-size: 1.25rem; margin-top: 1rem; margin-bottom: .25rem; font-weight: 700; }
+    .prose h3 { font-size: 1.1rem; margin-top: .75rem; margin-bottom: .25rem; font-weight: 600; }
+    .prose p  { margin:.5rem 0; line-height:1.6 }
+    .prose ul { list-style: disc; margin-left: 1.25rem; }
+    .badge { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); border-radius:.5rem; padding:.25rem .5rem; font-size: 0.875rem; }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6 text-white">
+  <div class="max-w-6xl mx-auto">
+    <header class="mb-6">
+      <h1 class="text-4xl font-bold">CandlPage SEO Suite</h1>
+      <p class="text-white/80">Keywords • Leads • Content</p>
+    </header>
+
+    <!-- Config -->
+    <div class="mb-4 bg-white/10 rounded-xl p-4 border border-white/20">
+      <label class="block text-sm mb-1">API Base URL</label>
+      <input id="apiBase" class="w-full p-2 rounded bg-white/10 border border-white/20"
+             value="http://localhost:3001" />
+      <p class="text-xs text-white/60 mt-1">Express server (proxies to Python backend)</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="mb-6 flex gap-2 border-b border-white/20 pb-4">
+      <button class="tab-btn active" data-tab="keywords">Keywords</button>
+      <button class="tab-btn inactive" data-tab="leads">Lead Generator</button>
+      <button class="tab-btn inactive" data-tab="articles">Articles</button>
+    </div>
+
+    <!-- Error -->
+    <div id="error" class="hidden bg-red-500/20 border border-red-500/50 rounded p-3 mb-6 text-red-200"></div>
+
+    <!-- KEYWORDS TAB -->
+    <div id="keywords-tab" class="tab-content">
+      <div class="bg-white/10 rounded-xl p-4 border border-white/20 mb-6">
+        <div class="grid md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block font-semibold mb-1">Topic</label>
+            <input id="topic" class="w-full p-3 rounded bg-white/10 border border-white/20"
+                   placeholder="e.g., solar panel installation houston" />
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Style</label>
+            <select id="style" class="w-full p-3 rounded bg-white/10 border border-white/20">
+              <option>Casual</option>
+              <option>Formal</option>
+              <option selected>Journalistic</option>
+              <option>Expert/Authoritative</option>
+              <option>Technical</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button id="btnKeywords" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Generate Keywords</button>
+          <button id="btnAnalyze"  class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded" disabled>Analyze</button>
+          <button id="btnArticles" class="bg-violet-500 hover:bg-violet-600 text-white px-4 py-2 rounded" disabled>Article</button>
+          <div id="status" class="ml-auto text-white/80"></div>
+        </div>
+      </div>
+
+      <div class="bg-white/10 rounded-xl p-4 border border-white/20 mb-6">
+        <h2 class="text-xl font-bold mb-3">Keywords</h2>
+        <div id="keywords" class="space-y-2 text-white/90"></div>
+      </div>
+
+      <div class="bg-white/10 rounded-xl p-4 border border-white/20">
+        <h2 class="text-xl font-bold mb-3">Article</h2>
+        <div id="articleTitle" class="text-2xl font-semibold mb-1"></div>
+        <div id="articleHTML" class="prose prose-invert max-w-none"></div>
+      </div>
+    </div>
+
+    <!-- LEADS TAB -->
+    <div id="leads-tab" class="tab-content hidden">
+      <div class="bg-white/10 rounded-xl p-4 border border-white/20 mb-6">
+        <div class="grid md:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label class="block font-semibold mb-1">Geography</label>
+            <input id="leadsGeo" class="w-full p-3 rounded bg-white/10 border border-white/20"
+                   placeholder="Houston, TX" />
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Industry</label>
+            <input id="leadsIndustry" class="w-full p-3 rounded bg-white/10 border border-white/20"
+                   placeholder="solar panel installation" />
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Max Results</label>
+            <input id="leadsMax" type="number" class="w-full p-3 rounded bg-white/10 border border-white/20"
+                   value="30" min="1" max="100" />
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button id="btnFindLeads" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded">Find Leads</button>
+          <button id="downloadLeadsCSV" class="badge">Download CSV</button>
+          <div id="leadsStatus" class="ml-auto text-white/80"></div>
+        </div>
+      </div>
+
+      <div class="bg-white/10 rounded-xl p-4 border border-white/20">
+        <h2 class="text-xl font-bold mb-3">Business Leads</h2>
+        <div id="leadsList" class="space-y-2 text-white/90 max-h-96 overflow-y-auto"></div>
+      </div>
+    </div>
+
+    <!-- ARTICLES TAB -->
+    <div id="articles-tab" class="tab-content hidden">
+      <div class="bg-white/10 rounded-xl p-4 border border-white/20">
+        <p class="text-white/70">Generate articles from keywords. Use the Keywords tab first.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const apiBaseEl = $("apiBase");
+    const statusEl = $("status");
+    const leadsStatusEl = $("leadsStatus");
+    const errEl = $("error");
+
+    let keywordItems = [];
+    let selected = new Set();
+    let lastLeads = [];
+
+    function setErr(msg) {
+      if (!msg) { errEl.classList.add("hidden"); errEl.textContent = ""; return; }
+      errEl.textContent = msg; errEl.classList.remove("hidden");
+    }
+
+    // Tab switching
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const tab = btn.getAttribute("data-tab");
+        document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
+        document.querySelectorAll(".tab-btn").forEach(b => {
+          b.classList.remove("active");
+          b.classList.add("inactive");
+        });
+        $(`${tab}-tab`).classList.remove("hidden");
+        btn.classList.add("active");
+        btn.classList.remove("inactive");
+      });
+    });
+
+    // KEYWORDS
+    function renderKeywords() {
+      const listEl = $("keywords");
+      listEl.innerHTML = "";
+      if (!keywordItems.length) {
+        listEl.innerHTML = '<div class="text-white/70">No keywords yet.</div>';
+        return;
+      }
+      keywordItems.forEach((k) => {
+        const wrap = document.createElement("div");
+        wrap.className = "bg-white/5 rounded p-2 border border-white/10 text-sm";
+        wrap.innerHTML = `<strong>${k.keyword}</strong> • Vol: ${k.search_volume || "—"} • Diff: ${k.keyword_difficulty || "—"}`;
+        listEl.appendChild(wrap);
+      });
+    }
+
+    $("btnKeywords").onclick = async () => {
+      setErr(""); statusEl.textContent = "Generating..."; keywordItems = []; selected.clear();
+      renderKeywords();
+      try {
+        const res = await fetch(`${apiBaseEl.value}/api/keywords`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ topic: $("topic").value || "" })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const json = await res.json();
+        keywordItems = json?.result?.keywords || [];
+        renderKeywords();
+        statusEl.textContent = `Got ${keywordItems.length} keywords`;
+      } catch (e) {
+        setErr(String(e.message || e));
+      }
+    };
+
+    $("btnArticles").onclick = async () => {
+      setErr(""); statusEl.textContent = "Generating article...";
+      try {
+        const kw = keywordItems[0]?.keyword || $("topic").value;
+        if (!kw) throw new Error("No keyword");
+        const res = await fetch(`${apiBaseEl.value}/api/generate-article`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ keywords: [kw], style: $("style").value, voice_notes: "", outline: null })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const json = await res.json();
+        const art = json?.result?.article || {};
+        $("articleTitle").textContent = art.title || "(Untitled)";
+        $("articleHTML").innerHTML = art.content || "<p>(no content)</p>";
+        statusEl.textContent = "Article generated";
+      } catch (e) {
+        setErr(String(e.message || e));
+      }
+    };
+
+    // LEADS
+    function renderLeads() {
+      const listEl = $("leadsList");
+      listEl.innerHTML = "";
+      if (!lastLeads.length) {
+        listEl.innerHTML = '<div class="text-white/70">No leads found.</div>';
+        return;
+      }
+      lastLeads.forEach((lead) => {
+        const wrap = document.createElement("div");
+        wrap.className = "bg-white/5 rounded p-3 border border-white/10";
+        const score = lead.score || 0;
+        const scoreColor = score >= 70 ? "text-green-400" : score >= 50 ? "text-yellow-400" : "text-red-400";
+        wrap.innerHTML = `
+          <div class="flex justify-between">
+            <div>
+              <strong>${lead.name || "Unknown"}</strong>
+              ${lead.website ? `<br><a href="${lead.website}" target="_blank" class="text-blue-400 text-sm">${lead.website}</a>` : ""}
+              ${lead.phone ? `<br><span class="text-sm text-white/70">📞 ${lead.phone}</span>` : ""}
+            </div>
+            <div class="text-right">
+              <div class="text-lg font-bold ${scoreColor}">${score.toFixed(0)}</div>
+              <div class="text-xs text-white/60">Score</div>
+            </div>
+          </div>`;
+        listEl.appendChild(wrap);
+      });
+    }
+
+    $("btnFindLeads").onclick = async () => {
+      setErr(""); leadsStatusEl.textContent = "Finding..."; lastLeads = [];
+      renderLeads();
+      try {
+        const geo = $("leadsGeo").value;
+        const industry = $("leadsIndustry").value;
+        if (!geo || !industry) throw new Error("Enter geography and industry");
+        const res = await fetch(`${apiBaseEl.value}/api/leads`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ geo, industry, max_results: parseInt($("leadsMax").value) || 30 })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const json = await res.json();
+        lastLeads = json?.result?.leads || [];
+        renderLeads();
+        leadsStatusEl.textContent = `Found ${lastLeads.length} leads`;
+      } catch (e) {
+        setErr(String(e.message || e));
+      }
+    };
+
+    $("downloadLeadsCSV").onclick = () => {
+      if (!lastLeads.length) return;
+      const headers = ["Name", "Website", "Phone", "Email", "Score"];
+      const rows = lastLeads.map(l => [l.name || "", l.website || "", l.phone || "", l.email || "", (l.score || 0).toFixed(0)]);
+      const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "leads.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    };
+  </script>
+</body>
+</html>

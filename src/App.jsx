@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { Shield, TrendingUp, Newspaper, Home } from 'lucide-react';
+import { Shield, TrendingUp, Newspaper, Search, Home } from 'lucide-react';
 import SecurityScanner from './components/SecurityScanner';
 import SeoAeoAudit from './components/SeoAeoAudit';
 import PressReleaseGenerator from './components/PressReleaseGenerator';
+import KeywordGenerator from './components/KeywordGenerator';
 import PasswordGate from './components/PasswordGate';
 
 function LandingPage() {
@@ -22,7 +23,7 @@ function LandingPage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           <Link
             to="/security"
             className="group bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105"
@@ -70,6 +71,22 @@ function LandingPage() {
               Launch Tool →
             </div>
           </Link>
+
+          <Link
+            to="/keywords"
+            className="group bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105"
+          >
+            <Search className="w-16 h-16 text-green-400 mb-4" />
+            <h2 className="text-3xl font-bold text-white mb-4">
+              Keyword Research
+            </h2>
+            <p className="text-gray-300 mb-6">
+              Clusters, long-tails, questions, targets, schema, content calendar
+            </p>
+            <div className="text-green-400 group-hover:text-green-300 font-semibold">
+              Launch Tool →
+            </div>
+          </Link>
         </div>
       </div>
     </div>
@@ -98,6 +115,7 @@ function App() {
         <Route path="/security" element={<SecurityScanner />} />
         <Route path="/seo-aeo" element={<SeoAeoAudit />} />
         <Route path="/press-release" element={<PressReleaseGenerator />} />
+        <Route path="/keywords" element={<KeywordGenerator />} />
       </Routes>
     </Router>
   );
