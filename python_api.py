@@ -288,7 +288,7 @@ class LeadsBody(BaseModel):
 def find_leads(body: LeadsBody):
     """Find business leads for a given geography and industry."""
     try:
-        from modules import lead_finder, scoring, seo_checks
+        from python_modules import lead_finder, scoring, seo_checks
 
         leads = lead_finder.find_leads(body.geo, body.industry, body.max_results)
 
