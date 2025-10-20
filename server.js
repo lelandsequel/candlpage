@@ -456,213 +456,6 @@ app.post("/api/batch-report", async (req, res) => {
   }
 });
 
-// --- Start server ------------------------------------------------------------
-app.listen(PORT, () => {
-  console.log(`Backend server running on http://localhost:${PORT}`);
-});
-
-// --- Press Release Generator API (OpenAI) -----------------------------------
-app.post("/api/generate-press-release", async (req, res) => {
-  try {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: "Missing OPENAI_API_KEY" });
-    }
-
-    const { company, announcement, style, voice_notes } = req.body || {};
-    if (!company || !announcement) {
-      return res.status(400).json({ error: "Company and announcement are required" });
-    }
-
-    const chosenStyle = (style || "Journalistic").trim();
-    const voiceNotes = (voice_notes || "").trim();
-
-    const prompt = `Create a professional press release for ${company}.
-
-ANNOUNCEMENT:
-${announcement}
-
-STYLE: ${chosenStyle}
-${voiceNotes ? `VOICE NOTES: ${voiceNotes}` : ""}
-
-Guidelines:
-- Start with a compelling headline
-- Include a dateline (use today's date)
-- Write in third person
-- Include 2-3 quotes from company leadership
-- Add a boilerplate "About ${company}" section
-- Keep it between 300-500 words
-- Use professional but engaging language
-- Include a call-to-action or contact information`;
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 2000,
-        temperature: 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("OpenAI API error:", error);
-      return res.status(response.status).json({ error: `OpenAI error: ${error}` });
-    }
-
-    const data = await response.json();
-    const content = data?.choices?.[0]?.message?.content || "";
-    
-    if (!content) {
-      return res.status(500).json({ error: "Empty response from OpenAI" });
-    }
-
-    // Extract headline (first line or first sentence)
-    const lines = content.split('\n').filter(l => l.trim());
-    const headline = lines[0] || "Press Release";
-    
-    // Extract dateline if present
-    let dateline = "";
-    for (const line of lines) {
-      if (line.includes("–") || line.includes("-")) {
-        dateline = line.trim();
-        break;
-      }
-    }
-    if (!dateline) {
-      const today = new Date();
-      const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-      dateline = `${months[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
-    }
-
-    const result = {
-      content: content,
-      headline: headline,
-      dateline: dateline,
-      metadata: {
-        word_count: content.split(/\s+/).length,
-        style: chosenStyle,
-      }
-    };
-
-    res.json({ result });
-  } catch (error) {
-    console.error("Press release generation error:", error);
-    res.status(500).json({ error: `Server error: ${error.message}` });
-  }
-});
-
-
-app.listen(PORT, () => {
-  console.log(`Backend server running on http://localhost:${PORT}`);
-});
-
-// --- Press Release Generator API (OpenAI) -----------------------------------
-app.post("/api/generate-press-release", async (req, res) => {
-  try {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: "Missing OPENAI_API_KEY" });
-    }
-
-    const { company, announcement, style, voice_notes } = req.body || {};
-    if (!company || !announcement) {
-      return res.status(400).json({ error: "Company and announcement are required" });
-    }
-
-    const chosenStyle = (style || "Journalistic").trim();
-    const voiceNotes = (voice_notes || "").trim();
-
-    const prompt = `Create a professional press release for ${company}.
-
-ANNOUNCEMENT:
-${announcement}
-
-STYLE: ${chosenStyle}
-${voiceNotes ? `VOICE NOTES: ${voiceNotes}` : ""}
-
-Guidelines:
-- Start with a compelling headline
-- Include a dateline (use today's date)
-- Write in third person
-- Include 2-3 quotes from company leadership
-- Add a boilerplate "About ${company}" section
-- Keep it between 300-500 words
-- Use professional but engaging language
-- Include a call-to-action or contact information`;
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 2000,
-        temperature: 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("OpenAI API error:", error);
-      return res.status(response.status).json({ error: `OpenAI error: ${error}` });
-    }
-
-    const data = await response.json();
-    const content = data?.choices?.[0]?.message?.content || "";
-    
-    if (!content) {
-      return res.status(500).json({ error: "Empty response from OpenAI" });
-    }
-
-    // Extract headline (first line or first sentence)
-    const lines = content.split('\n').filter(l => l.trim());
-    const headline = lines[0] || "Press Release";
-    
-    // Extract dateline if present
-    let dateline = "";
-    for (const line of lines) {
-      if (line.includes("–") || line.includes("-")) {
-        dateline = line.trim();
-        break;
-      }
-    }
-    if (!dateline) {
-      const today = new Date();
-      const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-      dateline = `${months[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
-    }
-
-    const result = {
-      content: content,
-      headline: headline,
-      dateline: dateline,
-      metadata: {
-        word_count: content.split(/\s+/).length,
-        style: chosenStyle,
-      }
-    };
-
-    res.json({ result });
-  } catch (error) {
-    console.error("Press release generation error:", error);
-    res.status(500).json({ error: `Server error: ${error.message}` });
-  }
-});
-
-
-app.listen(PORT, () => {
-  console.log(`Backend server running on http://localhost:${PORT}`);
-});
-
 // --- Press Release Generator API (OpenAI) -----------------------------------
 app.post("/api/generate-press-release", async (req, res) => {
   try {
@@ -725,7 +518,7 @@ Return ONLY valid JSON in exactly this format:
 
     const data = await response.json();
     const content = data?.choices?.[0]?.message?.content || "";
-    
+
     let parsed;
     try {
       parsed = JSON.parse(content);
@@ -752,4 +545,9 @@ Return ONLY valid JSON in exactly this format:
     console.error("Press release generation error:", error);
     res.status(500).json({ error: `Server error: ${error.message}` });
   }
+});
+
+// --- Start server (ONLY ONCE) ------------------------------------------------
+app.listen(PORT, () => {
+  console.log(`Backend server running on http://localhost:${PORT}`);
 });
