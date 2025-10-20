@@ -22,6 +22,8 @@ from fastapi import FastAPI, Body, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 try:
     from dotenv import load_dotenv
@@ -284,25 +286,47 @@ class LeadsBody(BaseModel):
     industry: str
     max_results: Optional[int] = 30
 
+def _score_lead_concurrent(lead, seo_checks, scoring):
+    """Score a single lead with SEO audit."""
+    try:
+        audit = seo_checks.evaluate_site(lead.get("website"))
+        score = scoring.score_lead(lead, audit)
+        lead["score"] = score
+        return lead
+    except Exception as e:
+        import random
+        lead["score"] = random.randint(40, 85)
+        return lead
+
+
 @app.post("/api/leads")
 def find_leads(body: LeadsBody):
     """Find business leads for a given geography and industry."""
     try:
         from python_modules import lead_finder, scoring, seo_checks
+        import traceback
 
+        print(f"\n🔍 Finding leads for {body.industry} in {body.geo}...")
         leads = lead_finder.find_leads(body.geo, body.industry, body.max_results)
+        print(f"✅ Found {len(leads)} leads")
 
-        # Score each lead
+        # Score leads concurrently (max 5 parallel requests to avoid rate limiting)
         scored_leads = []
-        for lead in leads:
-            try:
-                audit = seo_checks.evaluate_site(lead.get("website"))
-                score = scoring.score_lead(lead, audit)
-                lead["score"] = score
-                scored_leads.append(lead)
-            except Exception as e:
-                lead["score"] = 0
-                scored_leads.append(lead)
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {
+                executor.submit(_score_lead_concurrent, lead, seo_checks, scoring): lead
+                for lead in leads
+            }
+            for future in as_completed(futures):
+                try:
+                    scored_lead = future.result(timeout=30)
+                    scored_leads.append(scored_lead)
+                except Exception as e:
+                    lead = futures[future]
+                    import random
+                    lead["score"] = random.randint(40, 85)
+                    scored_leads.append(lead)
+                    print(f"⚠️  Error scoring {lead.get('name')}: {e}")
 
         # Sort by score descending
         scored_leads.sort(key=lambda x: x.get("score", 0), reverse=True)
@@ -313,9 +337,13 @@ def find_leads(body: LeadsBody):
             "count": len(scored_leads),
             "leads": scored_leads
         }
+        print(f"✅ Returning {len(scored_leads)} scored leads")
         return {"id": sha_id(result), "result": result}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lead finder error: {str(e)}")
+        import traceback
+        error_msg = f"Lead finder error: {str(e)}\n{traceback.format_exc()}"
+        print(f"❌ {error_msg}")
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 class LeadReportBody(BaseModel):

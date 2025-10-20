@@ -364,49 +364,6 @@ Output valid JSON only. No markdown fences. No commentary.`;
   }
 });
 
-// --- Lead Generator API (calls Python backend) --------------------------------
-app.post("/api/leads", async (req, res) => {
-  try {
-    const { geo, industry, max_results = 30 } = req.body;
-
-    if (!geo || !industry) {
-      return res.status(400).json({ error: "Missing geo or industry" });
-    }
-
-    // Call Python FastAPI backend on port 5057
-    const pythonApiBase = process.env.PYTHON_API_BASE || "http://localhost:5057";
-
-    try {
-      const response = await fetch(`${pythonApiBase}/api/leads`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ geo, industry, max_results }),
-        signal: AbortSignal.timeout(10000), // 10 second timeout
-      });
-
-      const text = await response.text();
-      if (!response.ok) {
-        console.error("Python API error:", text);
-        return res.status(response.status).json({ error: "Lead finder error", detail: text });
-      }
-
-      const data = JSON.parse(text);
-      res.json(data);
-    } catch (fetchErr) {
-      console.error("Python API connection error:", fetchErr.message);
-      // Return helpful error message
-      res.status(503).json({
-        error: "Lead generation service unavailable",
-        detail: "The lead generation service is not currently running. Please try again later or contact support.",
-        message: fetchErr.message
-      });
-    }
-  } catch (err) {
-    console.error("Lead API error:", err);
-    res.status(500).json({ error: "Server error", detail: String(err?.message || err) });
-  }
-});
-
 app.post("/api/lead-report", async (req, res) => {
   try {
     const { lead, geo, industry } = req.body;
@@ -551,7 +508,13 @@ Return ONLY valid JSON in exactly this format:
     }
 
     const data = await response.json();
-    const content = data?.choices?.[0]?.message?.content || "";
+    let content = data?.choices?.[0]?.message?.content || "";
+
+    // Extract JSON from markdown code blocks if present
+    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonMatch) {
+      content = jsonMatch[1].trim();
+    }
 
     let parsed;
     try {

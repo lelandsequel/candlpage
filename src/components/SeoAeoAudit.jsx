@@ -31,11 +31,11 @@ export default function SeoAeoAudit() {
         contentToAnalyze = `Source Code:\n${sourceCode}`;
       }
 
-      const prompt = `You are an SEO and AEO (Answer Engine Optimization) expert. Analyze this website for optimization opportunities.
+      const prompt = `You are an expert SEO and AEO (Answer Engine Optimization) specialist. Analyze this website comprehensively and provide ACTIONABLE, COPY-PASTE READY code snippets and fixes.
 
 ${contentToAnalyze}
 
-Provide analysis as JSON:
+Provide analysis as JSON with DETAILED, PRODUCTION-READY code:
 {
   "overallScore": number 0-100,
   "grade": "A+/A/B/C/D/F",
@@ -43,28 +43,59 @@ Provide analysis as JSON:
     {
       "title": "issue name",
       "severity": "LOW/MEDIUM/HIGH/CRITICAL",
-      "description": "what the issue is",
-      "fix": "exact code or text to copy-paste",
-      "impact": "how this affects SEO/AEO"
+      "description": "detailed explanation of the issue and why it matters",
+      "fix": "COMPLETE, COPY-PASTE READY code snippet (HTML/CSS/JS/config) - include full context",
+      "implementation": "step-by-step instructions on where and how to implement",
+      "impact": "specific SEO/AEO impact with metrics (e.g., +15% CTR, +0.5s LCP improvement)",
+      "priority": "1-10 (10 being most critical)"
     }
   ],
   "aeoOptimizations": [
     {
       "title": "optimization name",
-      "description": "what to optimize",
-      "implementation": "exact code or text to copy-paste",
-      "benefit": "how this helps answer engines"
+      "description": "detailed explanation of what to optimize and why",
+      "implementation": "COMPLETE, COPY-PASTE READY code snippet with full context",
+      "instructions": "step-by-step implementation guide",
+      "benefit": "specific benefit for answer engines (e.g., improves featured snippet chances by 40%)",
+      "examples": "2-3 real-world examples of how this helps"
     }
   ],
   "technicalSeo": {
     "present": ["feature1", "feature2"],
-    "missing": ["feature1", "feature2"]
+    "missing": ["feature1", "feature2"],
+    "fixes": [
+      {
+        "missing": "feature name",
+        "code": "COMPLETE code snippet to add this feature",
+        "location": "where to add it in the HTML/config"
+      }
+    ]
   },
-  "contentGaps": ["gap 1", "gap 2"],
-  "recommendations": ["recommendation 1", "recommendation 2"]
+  "contentGaps": [
+    {
+      "gap": "gap description",
+      "why": "why this matters for SEO/AEO",
+      "suggestion": "specific content to add",
+      "format": "recommended format (FAQ, how-to, comparison, etc)"
+    }
+  ],
+  "recommendations": [
+    {
+      "title": "recommendation title",
+      "description": "detailed explanation",
+      "code": "code snippet if applicable",
+      "expectedImprovement": "expected SEO/AEO improvement"
+    }
+  ]
 }
 
-CRITICAL: Respond ONLY with valid JSON. No markdown, no code blocks, no extra text.`;
+CRITICAL REQUIREMENTS:
+1. ALL code snippets must be COMPLETE and COPY-PASTE READY
+2. Include full HTML/CSS/JS context, not just fragments
+3. Provide specific file paths and line numbers where applicable
+4. Include implementation instructions for each fix
+5. Quantify expected improvements (e.g., +20% organic traffic, +0.3s LCP)
+6. Respond ONLY with valid JSON. No markdown, no code blocks, no extra text.`;
 
       const response = await fetch('http://localhost:3001/api/analyze', {
         method: 'POST',
@@ -338,17 +369,28 @@ Make it professional, actionable, and tailored for business stakeholders.`;
 
                 <div className="bg-white rounded-xl shadow-lg p-6">
                   <h2 className="text-xl font-bold text-gray-800 mb-4">SEO Issues</h2>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {analysis.seoIssues.map((issue, idx) => (
                       <div key={idx} className={`border rounded-lg p-4 ${getSeverityColor(issue.severity)}`}>
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold">{issue.title}</h3>
+                          <div>
+                            <h3 className="font-semibold">{issue.title}</h3>
+                            {issue.priority && <span className="text-xs text-gray-600">Priority: {issue.priority}/10</span>}
+                          </div>
                           <span className="text-xs px-2 py-1 bg-white rounded">{issue.severity}</span>
                         </div>
-                        <p className="text-sm mb-2">{issue.description}</p>
-                        <div className="bg-white/50 rounded p-2 mb-2">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-semibold">Fix:</span>
+                        <p className="text-sm mb-3">{issue.description}</p>
+
+                        {issue.implementation && (
+                          <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
+                            <p className="text-xs font-semibold text-blue-900 mb-1">📋 Implementation:</p>
+                            <p className="text-xs text-blue-800">{issue.implementation}</p>
+                          </div>
+                        )}
+
+                        <div className="bg-white/50 rounded p-3 mb-3">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs font-semibold">💻 Code Fix:</span>
                             <button
                               onClick={() => copyFix(issue.fix, `issue-${idx}`)}
                               className="text-xs px-2 py-1 bg-white rounded hover:bg-gray-100 flex items-center gap-1"
@@ -357,9 +399,15 @@ Make it professional, actionable, and tailored for business stakeholders.`;
                               {copiedIndex === `issue-${idx}` ? 'Copied!' : 'Copy'}
                             </button>
                           </div>
-                          <pre className="text-xs overflow-x-auto">{issue.fix}</pre>
+                          <pre className="text-xs overflow-x-auto bg-gray-900 text-green-400 p-2 rounded font-mono">{issue.fix}</pre>
                         </div>
-                        <p className="text-sm"><strong>Impact:</strong> {issue.impact}</p>
+
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="p-2 bg-green-50 rounded">
+                            <p className="text-xs font-semibold text-green-900">📈 Impact:</p>
+                            <p className="text-xs text-green-800">{issue.impact}</p>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -367,14 +415,22 @@ Make it professional, actionable, and tailored for business stakeholders.`;
 
                 <div className="bg-white rounded-xl shadow-lg p-6">
                   <h2 className="text-xl font-bold text-gray-800 mb-4">AEO Optimizations</h2>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {analysis.aeoOptimizations.map((opt, idx) => (
                       <div key={idx} className="border border-purple-200 rounded-lg p-4 bg-purple-50">
                         <h3 className="font-semibold text-purple-900 mb-2">{opt.title}</h3>
-                        <p className="text-sm text-gray-700 mb-2">{opt.description}</p>
-                        <div className="bg-white rounded p-2 mb-2">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-semibold">Implementation:</span>
+                        <p className="text-sm text-gray-700 mb-3">{opt.description}</p>
+
+                        {opt.instructions && (
+                          <div className="mb-3 p-2 bg-indigo-50 rounded border border-indigo-200">
+                            <p className="text-xs font-semibold text-indigo-900 mb-1">📝 Steps:</p>
+                            <p className="text-xs text-indigo-800 whitespace-pre-wrap">{opt.instructions}</p>
+                          </div>
+                        )}
+
+                        <div className="bg-white rounded p-3 mb-3">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs font-semibold">💻 Code:</span>
                             <button
                               onClick={() => copyFix(opt.implementation, `aeo-${idx}`)}
                               className="text-xs px-2 py-1 bg-purple-100 rounded hover:bg-purple-200 flex items-center gap-1"
@@ -383,9 +439,21 @@ Make it professional, actionable, and tailored for business stakeholders.`;
                               {copiedIndex === `aeo-${idx}` ? 'Copied!' : 'Copy'}
                             </button>
                           </div>
-                          <pre className="text-xs overflow-x-auto">{opt.implementation}</pre>
+                          <pre className="text-xs overflow-x-auto bg-gray-900 text-green-400 p-2 rounded font-mono">{opt.implementation}</pre>
                         </div>
-                        <p className="text-sm text-purple-700"><strong>Benefit:</strong> {opt.benefit}</p>
+
+                        <div className="space-y-2 text-sm">
+                          <div className="p-2 bg-green-50 rounded">
+                            <p className="text-xs font-semibold text-green-900">✨ Benefit:</p>
+                            <p className="text-xs text-green-800">{opt.benefit}</p>
+                          </div>
+                          {opt.examples && (
+                            <div className="p-2 bg-yellow-50 rounded">
+                              <p className="text-xs font-semibold text-yellow-900">💡 Examples:</p>
+                              <p className="text-xs text-yellow-800 whitespace-pre-wrap">{opt.examples}</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -393,9 +461,9 @@ Make it professional, actionable, and tailored for business stakeholders.`;
 
                 <div className="bg-white rounded-xl shadow-lg p-6">
                   <h2 className="text-xl font-bold text-gray-800 mb-4">Technical SEO</h2>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div>
-                      <h3 className="font-semibold text-green-700 mb-2">Present</h3>
+                      <h3 className="font-semibold text-green-700 mb-2">✅ Present</h3>
                       <div className="flex flex-wrap gap-2">
                         {analysis.technicalSeo.present.map((feature, idx) => (
                           <span key={idx} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
@@ -405,7 +473,7 @@ Make it professional, actionable, and tailored for business stakeholders.`;
                       </div>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-red-700 mb-2">Missing</h3>
+                      <h3 className="font-semibold text-red-700 mb-2">❌ Missing</h3>
                       <div className="flex flex-wrap gap-2">
                         {analysis.technicalSeo.missing.map((feature, idx) => (
                           <span key={idx} className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">
@@ -414,31 +482,101 @@ Make it professional, actionable, and tailored for business stakeholders.`;
                         ))}
                       </div>
                     </div>
+                    {analysis.technicalSeo.fixes && analysis.technicalSeo.fixes.length > 0 && (
+                      <div className="border-t pt-4">
+                        <h3 className="font-semibold text-blue-700 mb-3">🔧 How to Add Missing Features</h3>
+                        <div className="space-y-3">
+                          {analysis.technicalSeo.fixes.map((fix, idx) => (
+                            <div key={idx} className="bg-blue-50 border border-blue-200 rounded p-3">
+                              <p className="text-sm font-semibold text-blue-900 mb-2">{fix.missing}</p>
+                              <p className="text-xs text-blue-800 mb-2"><strong>Location:</strong> {fix.location}</p>
+                              <div className="bg-white rounded p-2">
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-xs font-semibold">Code:</span>
+                                  <button
+                                    onClick={() => copyFix(fix.code, `tech-${idx}`)}
+                                    className="text-xs px-2 py-1 bg-blue-100 rounded hover:bg-blue-200 flex items-center gap-1"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                    {copiedIndex === `tech-${idx}` ? 'Copied!' : 'Copy'}
+                                  </button>
+                                </div>
+                                <pre className="text-xs overflow-x-auto bg-gray-900 text-green-400 p-2 rounded font-mono">{fix.code}</pre>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-lg p-6">
                   <h2 className="text-xl font-bold text-gray-800 mb-4">Content Gaps</h2>
-                  <ul className="space-y-2">
-                    {analysis.contentGaps.map((gap, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-gray-700">
-                        <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{gap}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="space-y-3">
+                    {analysis.contentGaps.map((gap, idx) => {
+                      const gapItem = typeof gap === 'string' ? { gap } : gap;
+                      return (
+                        <div key={idx} className="border border-yellow-200 rounded-lg p-3 bg-yellow-50">
+                          <div className="flex items-start gap-2 mb-2">
+                            <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-yellow-900">{gapItem.gap}</p>
+                            </div>
+                          </div>
+                          {gapItem.why && (
+                            <p className="text-xs text-yellow-800 mb-2"><strong>Why:</strong> {gapItem.why}</p>
+                          )}
+                          {gapItem.suggestion && (
+                            <p className="text-xs text-yellow-800 mb-2"><strong>Suggestion:</strong> {gapItem.suggestion}</p>
+                          )}
+                          {gapItem.format && (
+                            <p className="text-xs text-yellow-800"><strong>Format:</strong> {gapItem.format}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-lg p-6">
                   <h2 className="text-xl font-bold text-gray-800 mb-4">Recommendations</h2>
-                  <ul className="space-y-2">
-                    {analysis.recommendations.map((rec, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-gray-700">
-                        <CheckCircle className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{rec}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="space-y-3">
+                    {analysis.recommendations.map((rec, idx) => {
+                      const recItem = typeof rec === 'string' ? { title: rec } : rec;
+                      return (
+                        <div key={idx} className="border border-purple-200 rounded-lg p-3 bg-purple-50">
+                          <div className="flex items-start gap-2 mb-2">
+                            <CheckCircle className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-purple-900">{recItem.title}</p>
+                            </div>
+                          </div>
+                          {recItem.description && (
+                            <p className="text-xs text-purple-800 mb-2">{recItem.description}</p>
+                          )}
+                          {recItem.code && (
+                            <div className="bg-white rounded p-2 mb-2">
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-xs font-semibold">Code:</span>
+                                <button
+                                  onClick={() => copyFix(recItem.code, `rec-${idx}`)}
+                                  className="text-xs px-2 py-1 bg-purple-100 rounded hover:bg-purple-200 flex items-center gap-1"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                  {copiedIndex === `rec-${idx}` ? 'Copied!' : 'Copy'}
+                                </button>
+                              </div>
+                              <pre className="text-xs overflow-x-auto bg-gray-900 text-green-400 p-2 rounded font-mono">{recItem.code}</pre>
+                            </div>
+                          )}
+                          {recItem.expectedImprovement && (
+                            <p className="text-xs text-green-700"><strong>Expected Improvement:</strong> {recItem.expectedImprovement}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {strategicReport && (

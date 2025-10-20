@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { Shield, TrendingUp, Sparkles, Users } from 'lucide-react';
+import { Shield, TrendingUp, Sparkles } from 'lucide-react';
 import SecurityScanner from './components/SecurityScanner';
 import SeoAeoAudit from './components/SeoAeoAudit';
 import PressReleaseGenerator from './components/PressReleaseGenerator';
 import KeywordGenerator from './components/KeywordGenerator';
-import LeadGenerator from './components/LeadGenerator';
 import PasswordGate from './components/PasswordGate';
 import ContentSuite from './components/ContentSuite';
 
@@ -25,7 +24,7 @@ function LandingPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-4 gap-8">
+        <div className="grid grid-cols-3 gap-8">
           <Link
             to="/content-suite"
             className="group bg-gradient-to-br from-pink-600/20 to-purple-600/20 backdrop-blur-lg rounded-2xl p-8 border border-pink-500/30 hover:bg-pink-600/30 transition-all duration-300 hover:scale-105"
@@ -73,25 +72,6 @@ function LandingPage() {
               Launch Tool →
             </div>
           </Link>
-
-          <Link
-            to="/leads"
-            className="group bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105"
-          >
-            <Users className="w-16 h-16 text-orange-400 mb-4" />
-            <h2 className="text-2xl font-bold text-white mb-4">
-              Lead Generator
-            </h2>
-            <p className="text-gray-300 mb-2 text-sm">
-              Find and score business leads, manual and automated runs
-            </p>
-            <p className="text-yellow-300 mb-6 text-xs bg-yellow-900/30 p-2 rounded border border-yellow-700/50">
-              ⚠️ Requires Python backend running locally
-            </p>
-            <div className="text-orange-400 group-hover:text-orange-300 font-semibold text-sm">
-              Launch Tool →
-            </div>
-          </Link>
         </div>
       </div>
 
@@ -126,7 +106,6 @@ function App() {
         <Route path="/seo-aeo" element={<SeoAeoAudit />} />
         <Route path="/press-release" element={<PressReleaseGenerator />} />
         <Route path="/keywords" element={<KeywordGenerator />} />
-        <Route path="/leads" element={<LeadGenerator />} />
       </Routes>
     </Router>
   );
