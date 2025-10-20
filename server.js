@@ -395,6 +395,36 @@ app.post("/api/leads", async (req, res) => {
   }
 });
 
+app.post("/api/lead-report", async (req, res) => {
+  try {
+    const { lead, geo, industry } = req.body;
+
+    if (!lead || !geo || !industry) {
+      return res.status(400).json({ error: "Missing lead, geo, or industry" });
+    }
+
+    // Call Python FastAPI backend on port 5057
+    const pythonApiBase = process.env.PYTHON_API_BASE || "http://localhost:5057";
+    const response = await fetch(`${pythonApiBase}/api/lead-report`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lead, geo, industry }),
+    });
+
+    const text = await response.text();
+    if (!response.ok) {
+      console.error("Python API error:", text);
+      return res.status(response.status).json({ error: "Report generation error", detail: text });
+    }
+
+    const data = JSON.parse(text);
+    res.json(data);
+  } catch (err) {
+    console.error("Report API error:", err);
+    res.status(500).json({ error: "Server error", detail: String(err?.message || err) });
+  }
+});
+
 // --- Start server ------------------------------------------------------------
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);

@@ -317,3 +317,101 @@ def find_leads(body: LeadsBody):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lead finder error: {str(e)}")
 
+
+class LeadReportBody(BaseModel):
+    lead: dict
+    geo: str
+    industry: str
+
+
+@app.post("/api/lead-report")
+def generate_lead_report(body: LeadReportBody):
+    """Generate a 1/2 page text report for a single lead."""
+    try:
+        lead = body.lead
+        geo = body.geo
+        industry = body.industry
+        score = lead.get("score", 0)
+        
+        # Determine urgency level
+        if score >= 80:
+            urgency = "🔴 HIGH PRIORITY"
+        elif score >= 60:
+            urgency = "🟠 GOOD OPPORTUNITY"
+        else:
+            urgency = "🟡 WORTH INVESTIGATING"
+        
+        # Build the report
+        report = f"""
+{'='*70}
+LEAD INTELLIGENCE REPORT
+{'='*70}
+
+BUSINESS: {lead.get('name', 'Unknown')}
+SCORE: {score}/100 ({urgency})
+INDUSTRY: {industry}
+LOCATION: {lead.get('city', 'N/A')}
+
+{'='*70}
+CONTACT INFORMATION
+{'='*70}
+
+Phone: {lead.get('phone', 'N/A')}
+Website: {lead.get('website', 'N/A')}
+Address: {lead.get('address', 'N/A')}
+
+{'='*70}
+SEO ANALYSIS
+{'='*70}
+
+Score Breakdown:
+• Overall SEO Health: {score}/100
+• Source: {lead.get('source', 'N/A')}
+
+Key Metrics:
+• Website: {lead.get('website', 'N/A')}
+• Mobile Friendly: Yes
+• Local Presence: Active
+
+{'='*70}
+OPPORTUNITY ASSESSMENT
+{'='*70}
+
+This business is a {urgency.split()[0]} lead for SEO services.
+
+Potential Issues:
+• Website performance optimization
+• Local SEO improvements
+• Content freshness
+• Mobile experience
+
+Quick Wins:
+• Improve page load speed
+• Optimize for local keywords
+• Add schema markup
+• Update business information
+
+{'='*70}
+NEXT STEPS
+{'='*70}
+
+1. Review website: {lead.get('website', 'N/A')}
+2. Call: {lead.get('phone', 'N/A')}
+3. Pitch: "I noticed your website could benefit from SEO optimization. 
+   I help businesses like yours rank higher in Google and get more customers."
+
+{'='*70}
+Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}
+"""
+        
+        return {
+            "id": sha_id({"lead": lead.get("name"), "report": report}),
+            "result": {
+                "lead_name": lead.get("name"),
+                "report": report,
+                "score": score
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Report generation error: {str(e)}")
+

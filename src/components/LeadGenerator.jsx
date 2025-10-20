@@ -42,6 +42,44 @@ export default function LeadGenerator() {
   // UI State
   const [activeTab, setActiveTab] = useState("manual");
   const [sortBy, setSortBy] = useState("score");
+  const [reportLoading, setReportLoading] = useState(null);
+  const [reports, setReports] = useState({});
+
+  // Generate Report for a lead
+  async function generateReport(lead) {
+    setReportLoading(lead.name);
+    try {
+      const res = await fetch("/api/lead-report", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          lead: lead,
+          geo: manualGeo,
+          industry: manualIndustry
+        })
+      });
+
+      const text = await res.text();
+      if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
+      const json = JSON.parse(text);
+      const report = json?.result?.report || "";
+      
+      // Save report and trigger download
+      const blob = new Blob([report], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${lead.name.replace(/[^a-z0-9]/gi, '_')}_report.txt`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      
+      // Store report in state
+      setReports(prev => ({...prev, [lead.name]: report}));
+    } catch (e) {
+      alert("Error generating report: " + String(e.message || e));
+    } finally {
+      setReportLoading(null);
+    }
+  }
 
   // Manual Run
   async function runManualSearch() {
@@ -346,6 +384,20 @@ export default function LeadGenerator() {
                             {lead.email && <span className="ml-4">📧 {lead.email}</span>}
                             {lead.city && <span className="ml-4">📍 {lead.city}</span>}
                           </div>
+                          <button
+                            onClick={() => generateReport(lead)}
+                            disabled={reportLoading === lead.name}
+                            className="mt-2 px-3 py-1 rounded bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 text-white text-sm font-semibold flex items-center gap-2 transition"
+                          >
+                            {reportLoading === lead.name ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              "📄 Generate Report"
+                            )}
+                          </button>
                         </div>
                         <div className="text-right">
                           <div className={`text-3xl font-bold ${getScoreColor(lead.score || 0)}`}>
