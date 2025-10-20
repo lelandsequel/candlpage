@@ -82,8 +82,11 @@ function LandingPage() {
             <h2 className="text-2xl font-bold text-white mb-4">
               Lead Generator
             </h2>
-            <p className="text-gray-300 mb-6 text-sm">
+            <p className="text-gray-300 mb-2 text-sm">
               Find and score business leads, manual and automated runs
+            </p>
+            <p className="text-yellow-300 mb-6 text-xs bg-yellow-900/30 p-2 rounded border border-yellow-700/50">
+              ⚠️ Requires Python backend running locally
             </p>
             <div className="text-orange-400 group-hover:text-orange-300 font-semibold text-sm">
               Launch Tool →
