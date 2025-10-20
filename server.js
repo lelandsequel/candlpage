@@ -32,7 +32,7 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
-app.use(express.static(__dirname)); // Serve static files (ui.html, etc.)
+app.use(express.static(path.join(__dirname, "dist"))); // Serve built frontend from dist/
 
 // --- Utilities ---------------------------------------------------------------
 function safeParseJSON(maybeJSON) {
@@ -545,6 +545,11 @@ Return ONLY valid JSON in exactly this format:
     console.error("Press release generation error:", error);
     res.status(500).json({ error: `Server error: ${error.message}` });
   }
+});
+
+// --- Fallback route for React Router (SPA) ----------------------------------
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 
 // --- Start server (ONLY ONCE) ------------------------------------------------
