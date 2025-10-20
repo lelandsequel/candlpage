@@ -375,20 +375,32 @@ app.post("/api/leads", async (req, res) => {
 
     // Call Python FastAPI backend on port 5057
     const pythonApiBase = process.env.PYTHON_API_BASE || "http://localhost:5057";
-    const response = await fetch(`${pythonApiBase}/api/leads`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ geo, industry, max_results }),
-    });
 
-    const text = await response.text();
-    if (!response.ok) {
-      console.error("Python API error:", text);
-      return res.status(response.status).json({ error: "Lead finder error", detail: text });
+    try {
+      const response = await fetch(`${pythonApiBase}/api/leads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ geo, industry, max_results }),
+        signal: AbortSignal.timeout(10000), // 10 second timeout
+      });
+
+      const text = await response.text();
+      if (!response.ok) {
+        console.error("Python API error:", text);
+        return res.status(response.status).json({ error: "Lead finder error", detail: text });
+      }
+
+      const data = JSON.parse(text);
+      res.json(data);
+    } catch (fetchErr) {
+      console.error("Python API connection error:", fetchErr.message);
+      // Return helpful error message
+      res.status(503).json({
+        error: "Lead generation service unavailable",
+        detail: "The lead generation service is not currently running. Please try again later or contact support.",
+        message: fetchErr.message
+      });
     }
-
-    const data = JSON.parse(text);
-    res.json(data);
   } catch (err) {
     console.error("Lead API error:", err);
     res.status(500).json({ error: "Server error", detail: String(err?.message || err) });
@@ -405,20 +417,31 @@ app.post("/api/lead-report", async (req, res) => {
 
     // Call Python FastAPI backend on port 5057
     const pythonApiBase = process.env.PYTHON_API_BASE || "http://localhost:5057";
-    const response = await fetch(`${pythonApiBase}/api/lead-report`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lead, geo, industry }),
-    });
 
-    const text = await response.text();
-    if (!response.ok) {
-      console.error("Python API error:", text);
-      return res.status(response.status).json({ error: "Report generation error", detail: text });
+    try {
+      const response = await fetch(`${pythonApiBase}/api/lead-report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lead, geo, industry }),
+        signal: AbortSignal.timeout(10000),
+      });
+
+      const text = await response.text();
+      if (!response.ok) {
+        console.error("Python API error:", text);
+        return res.status(response.status).json({ error: "Report generation error", detail: text });
+      }
+
+      const data = JSON.parse(text);
+      res.json(data);
+    } catch (fetchErr) {
+      console.error("Python API connection error:", fetchErr.message);
+      res.status(503).json({
+        error: "Report generation service unavailable",
+        detail: "The report generation service is not currently running.",
+        message: fetchErr.message
+      });
     }
-
-    const data = JSON.parse(text);
-    res.json(data);
   } catch (err) {
     console.error("Report API error:", err);
     res.status(500).json({ error: "Server error", detail: String(err?.message || err) });
@@ -436,20 +459,31 @@ app.post("/api/batch-report", async (req, res) => {
 
     // Call Python FastAPI backend on port 5057
     const pythonApiBase = process.env.PYTHON_API_BASE || "http://localhost:5057";
-    const response = await fetch(`${pythonApiBase}/api/batch-report`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ leads, geo }),
-    });
 
-    const text = await response.text();
-    if (!response.ok) {
-      console.error("Python API error:", text);
-      return res.status(response.status).json({ error: "Batch report generation error", detail: text });
+    try {
+      const response = await fetch(`${pythonApiBase}/api/batch-report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leads, geo }),
+        signal: AbortSignal.timeout(10000),
+      });
+
+      const text = await response.text();
+      if (!response.ok) {
+        console.error("Python API error:", text);
+        return res.status(response.status).json({ error: "Batch report generation error", detail: text });
+      }
+
+      const data = JSON.parse(text);
+      res.json(data);
+    } catch (fetchErr) {
+      console.error("Python API connection error:", fetchErr.message);
+      res.status(503).json({
+        error: "Batch report service unavailable",
+        detail: "The batch report service is not currently running.",
+        message: fetchErr.message
+      });
     }
-
-    const data = JSON.parse(text);
-    res.json(data);
   } catch (err) {
     console.error("Batch report API error:", err);
     res.status(500).json({ error: "Server error", detail: String(err?.message || err) });
