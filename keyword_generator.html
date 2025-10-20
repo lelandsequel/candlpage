@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Keyword + Blog Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide icons (optional) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .prose h2 { font-size: 1.25rem; margin-top: 1rem; margin-bottom: .25rem; font-weight: 700; }
+    .prose h3 { font-size: 1.1rem; margin-top: .75rem; margin-bottom: .25rem; font-weight: 600; }
+    .prose p  { margin:.5rem 0; line-height:1.6 }
+    .prose ul { list-style: disc; margin-left: 1.25rem; }
+    .badge { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); border-radius:.5rem; padding:.25rem .5rem; }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6 text-white">
+  <div class="max-w-5xl mx-auto">
+    <header class="mb-6">
+      <h1 class="text-3xl font-bold">Keyword Research & Blog Generator</h1>
+      <p class="text-white/80">Drop-in UI that talks to your FastAPI server.</p>
+    </header>
+
+    <!-- Config -->
+    <div class="mb-4 bg-white/10 rounded-xl p-4 border border-white/20">
+      <label class="block text-sm mb-1">API Base URL</label>
+      <input id="apiBase" class="w-full p-2 rounded bg-white/10 border border-white/20"
+             value="http://localhost:5057" />
+      <p class="text-xs text-white/60 mt-1">Change if your backend is hosted elsewhere.</p>
+    </div>
+
+    <!-- Controls -->
+    <div class="bg-white/10 rounded-xl p-4 border border-white/20 mb-6">
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="block font-semibold mb-1">Topic / Business</label>
+          <input id="topic" class="w-full p-3 rounded bg-white/10 border border-white/20"
+                 placeholder="e.g., solar panel installation houston" />
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Article Style</label>
+          <select id="style" class="w-full p-3 rounded bg-white/10 border border-white/20">
+            <option>Casual</option>
+            <option>Formal</option>
+            <option selected>Journalistic</option>
+            <option>Expert/Authoritative</option>
+            <option>Technical</option>
+            <option>Storytelling</option>
+            <option>Persuasive/Direct-Response</option>
+            <option>Playful/Witty</option>
+          </select>
+        </div>
+      </div>
+      <div class="mt-3">
+        <label class="block font-semibold mb-1">Voice Notes (optional)</label>
+        <textarea id="voice" rows="2" class="w-full p-3 rounded bg-white/10 border border-white/20"
+                  placeholder="Confident, specific; cite code & ROI. Avoid fluff."></textarea>
+      </div>
+      <div class="mt-4 flex flex-wrap gap-3">
+        <button id="btnKeywords" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Generate Keywords</button>
+        <button id="btnAnalyze"  class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded" disabled>Analyze Competitors</button>
+        <button id="btnArticles" class="bg-violet-500 hover:bg-violet-600 text-white px-4 py-2 rounded" disabled>Generate Article</button>
+        <div id="status" class="ml-auto text-white/80"></div>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div id="error" class="hidden bg-red-500/20 border border-red-500/50 rounded p-3 mb-6 text-red-200"></div>
+
+    <!-- Keywords -->
+    <div class="bg-white/10 rounded-xl p-4 border border-white/20 mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xl font-bold">Keywords</h2>
+        <div class="flex gap-2">
+          <button id="selectAll" class="badge">Select All</button>
+          <button id="clearSel" class="badge">Clear</button>
+        </div>
+      </div>
+      <div id="keywords" class="space-y-3 text-white/90"></div>
+    </div>
+
+    <!-- Article -->
+    <div class="bg-white/10 rounded-xl p-4 border border-white/20">
+      <h2 class="text-xl font-bold mb-3">Article</h2>
+      <div class="flex gap-2 mb-3">
+        <button id="copyJSON" class="badge">Copy JSON</button>
+        <button id="downloadHTML" class="badge">Download HTML</button>
+      </div>
+      <div id="articleTitle" class="text-2xl font-semibold mb-1"></div>
+      <div id="articleMeta" class="text-white/70 mb-3"></div>
+      <div id="articleHTML" class="prose prose-invert max-w-none"></div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const apiBaseEl = $("apiBase");
+    const topicEl   = $("topic");
+    const styleEl   = $("style");
+    const voiceEl   = $("voice");
+    const statusEl  = $("status");
+    const errEl     = $("error");
+    const listEl    = $("keywords");
+    const btnKeywords = $("btnKeywords");
+    const btnAnalyze  = $("btnAnalyze");
+    const btnArticles = $("btnArticles");
+    const btnSelectAll= $("selectAll");
+    const btnClear    = $("clearSel");
+    const btnCopyJSON = $("copyJSON");
+    const btnDLHTML   = $("downloadHTML");
+    const artTitleEl  = $("articleTitle");
+    const artMetaEl   = $("articleMeta");
+    const artHTMLEl   = $("articleHTML");
+
+    let keywordItems = [];
+    let selected = new Set();
+    let outline = null;
+    let lastArticlePayload = null;
+
+    function setErr(msg) {
+      if (!msg) { errEl.classList.add("hidden"); errEl.textContent = ""; return; }
+      errEl.textContent = msg; errEl.classList.remove("hidden");
+    }
+    function setStatus(msg) { statusEl.textContent = msg || ""; }
+
+    function renderKeywords() {
+      listEl.innerHTML = "";
+      if (!keywordItems.length) {
+        listEl.innerHTML = '<div class="text-white/70">No keywords yet.</div>';
+        btnAnalyze.disabled = true;
+        btnArticles.disabled = true;
+        return;
+      }
+      keywordItems.forEach((k, i) => {
+        const wrap = document.createElement("div");
+        wrap.className = "bg-white/5 rounded p-3 border border-white/10";
+        wrap.innerHTML = `
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" data-kw="${k.keyword}" ${selected.has(k.keyword) ? "checked" : ""}/>
+            <div>
+              <div class="font-semibold">${k.keyword}</div>
+              <div class="text-sm text-white/70 flex flex-wrap gap-4">
+                <span>Volume: ${k.search_volume ?? "—"}</span>
+                <span>Difficulty: ${k.keyword_difficulty ?? "—"}</span>
+                <span>Intent: ${k.commercial_intent ?? "—"}</span>
+                <span>Rank Window: ${k.ranking_potential ?? "—"}</span>
+              </div>
+            </div>
+          </label>`;
+        listEl.appendChild(wrap);
+      });
+      listEl.querySelectorAll("input[type=checkbox]").forEach(chk=>{
+        chk.addEventListener("change", (e) => {
+          const kw = e.target.getAttribute("data-kw");
+          if (e.target.checked) selected.add(kw); else selected.delete(kw);
+          btnAnalyze.disabled = selected.size === 0;
+          btnArticles.disabled = selected.size === 0;
+        });
+      });
+      btnAnalyze.disabled = selected.size === 0;
+      btnArticles.disabled = selected.size === 0;
+    }
+
+    function download(filename, text, type="text/html") {
+      const blob = new Blob([text], { type });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    btnKeywords.onclick = async () => {
+      setErr(""); setStatus("Generating keywords…"); keywordItems = []; selected.clear(); outline = null; lastArticlePayload = null;
+      renderKeywords();
+      try {
+        const res = await fetch(`${apiBaseEl.value}/api/keywords`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ topic: topicEl.value || "" })
+        });
+        const text = await res.text();
+        if (!res.ok) throw new Error(text);
+        const json = JSON.parse(text);
+        keywordItems = json?.result?.keywords || [];
+        renderKeywords();
+        setStatus(`Got ${keywordItems.length} keywords`);
+      } catch (e) {
+        setErr(String(e.message || e)); setStatus("");
+      }
+    };
+
+    btnAnalyze.onclick = async () => {
+      setErr(""); setStatus("Analyzing competitors…"); outline = null;
+      try {
+        const kws = Array.from(selected);
+        const res = await fetch(`${apiBaseEl.value}/api/analyze-content`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ keywords: kws })
+        });
+        const text = await res.text();
+        if (!res.ok) throw new Error(text);
+        const json = JSON.parse(text);
+        outline = json?.result?.content_outline || null;
+        setStatus("Analysis ready (outline captured)");
+      } catch (e) {
+        setErr(String(e.message || e)); setStatus("");
+      }
+    };
+
+    btnArticles.onclick = async () => {
+      setErr(""); setStatus("Generating article…"); lastArticlePayload = null;
+      try {
+        const kws = Array.from(selected);
+        if (kws.length === 0) throw new Error("Select at least one keyword.");
+        // generate for the first selected keyword
+        const res = await fetch(`${apiBaseEl.value}/api/generate-article`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            keywords: [kws[0]],
+            outline: outline || null,
+            style: styleEl.value,
+            voice_notes: voiceEl.value || ""
+          })
+        });
+        const text = await res.text();
+        if (!res.ok) throw new Error(text);
+        const json = JSON.parse(text);
+        lastArticlePayload = json?.result || {};
+        const art = lastArticlePayload?.article || {};
+        artTitleEl.textContent = art.title || "(Untitled)";
+        artMetaEl.textContent  = art.meta_description || "";
+        artHTMLEl.innerHTML    = art.content || "<p>(no content)</p>";
+        setStatus("Article generated");
+      } catch (e) {
+        setErr(String(e.message || e)); setStatus("");
+      }
+    };
+
+    btnSelectAll.onclick = () => { keywordItems.forEach(k => selected.add(k.keyword)); renderKeywords(); };
+    btnClear.onclick     = () => { selected.clear(); renderKeywords(); };
+
+    btnCopyJSON.onclick = () => {
+      if (!lastArticlePayload) return;
+      navigator.clipboard.writeText(JSON.stringify(lastArticlePayload, null, 2));
+    };
+
+    btnDLHTML.onclick = () => {
+      if (!lastArticlePayload) return;
+      const a = lastArticlePayload.article || {};
+      const title = (a.title || "article").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"");
+      const doc = `<!doctype html><html lang="en"><head><meta charset="utf-8" /><title>${a.title || "Article"}</title><meta name="description" content="${a.meta_description || ""}" /></head><body>${a.content || ""}</body></html>`;
+      download(`${title || "article"}.html`, doc, "text/html");
+    };
+
+    window.onload = () => { try { lucide.createIcons(); } catch(_){} };
+  </script>
+</body>
+</html>
+

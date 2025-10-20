@@ -1,0 +1,33 @@
+{
+  "email": {
+    "to": ["info@candlstrategy.com", "tj@infinitydigitalsolution.com", "lorenzo@infinitydigitalsolution.com", "Korbin@infinitydigitalsolution.com"],
+    "from": "info@candlstrategy.com",
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "use_tls": true,
+    "password_env_var": "GMAIL_APP_PASSWORD"
+  },
+  "schedule": {
+    "day": "monday",
+    "hour": 4,
+    "minute": 0,
+    "timezone": "America/Chicago"
+  },
+  "searches": [
+    {
+      "geo": "Westlake Village, CA",
+      "industry": "dentists",
+      "max_results": 20
+    },
+    {
+      "geo": "Miami, FL",
+      "industry": "Personal Injury Lawyers",
+      "max_results": 20
+    },
+    {
+      "geo": "Houston, TX",
+      "industry": "landscape companies",
+      "max_results": 20
+    }
+  ]
+}

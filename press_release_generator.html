@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Press Release Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6 text-white">
+  <div class="max-w-5xl mx-auto">
+    <header class="mb-6">
+      <h1 class="text-3xl font-bold">Press Release Generator</h1>
+      <p class="text-white/80">Create professional press releases with customizable tone and voice.</p>
+    </header>
+
+    <!-- Config -->
+    <div class="mb-4 bg-white/10 rounded-xl p-4 border border-white/20">
+      <label class="block text-sm mb-1">API Base URL</label>
+      <input id="apiBase" class="w-full p-2 rounded bg-white/10 border border-white/20"
+             value="http://localhost:3001" />
+      <p class="text-xs text-white/60 mt-1">Change if your backend is hosted elsewhere.</p>
+    </div>
+
+    <!-- Controls -->
+    <div class="bg-white/10 rounded-xl p-4 border border-white/20 mb-6">
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="block font-semibold mb-1">Company Name</label>
+          <input id="company" class="w-full p-3 rounded bg-white/10 border border-white/20"
+                 placeholder="e.g., Acme Corporation" />
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Press Release Style</label>
+          <select id="style" class="w-full p-3 rounded bg-white/10 border border-white/20">
+            <option>Casual</option>
+            <option>Formal</option>
+            <option selected>Journalistic</option>
+            <option>Expert/Authoritative</option>
+            <option>Technical</option>
+            <option>Storytelling</option>
+            <option>Persuasive/Direct-Response</option>
+            <option>Playful/Witty</option>
+          </select>
+        </div>
+      </div>
+      <div class="mt-3">
+        <label class="block font-semibold mb-1">Announcement Details</label>
+        <textarea id="announcement" rows="4" class="w-full p-3 rounded bg-white/10 border border-white/20"
+                  placeholder="Describe the announcement, product launch, partnership, etc."></textarea>
+      </div>
+      <div class="mt-3">
+        <label class="block font-semibold mb-1">Voice Notes (optional)</label>
+        <textarea id="voice" rows="2" class="w-full p-3 rounded bg-white/10 border border-white/20"
+                  placeholder="e.g., Professional but approachable. Emphasize innovation."></textarea>
+      </div>
+      <div class="mt-4 flex flex-wrap gap-3">
+        <button id="btnGenerate" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded">Generate Press Release</button>
+        <div id="status" class="ml-auto text-white/80"></div>
+      </div>
+    </div>
+
+    <!-- Error Display -->
+    <div id="error" class="bg-red-500/20 border border-red-500 rounded-lg p-4 mb-6 hidden">
+      <p class="text-red-200" id="errorText"></p>
+    </div>
+
+    <!-- Results -->
+    <div id="results" class="hidden">
+      <div class="bg-white/10 rounded-xl p-4 border border-white/20 mb-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-2xl font-bold">Generated Press Release</h2>
+          <div class="flex gap-2">
+            <button id="btnCopy" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Copy</button>
+            <button id="btnDownload" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Download</button>
+          </div>
+        </div>
+        <div class="bg-black/30 rounded-lg p-4 max-h-96 overflow-y-auto">
+          <div id="releaseContent" class="text-gray-200 text-sm whitespace-pre-wrap font-mono"></div>
+        </div>
+        <div id="metadata" class="mt-4 text-sm text-gray-300"></div>
+      </div>
+    </div>
+
+    <script>
+      const apiBaseEl = document.getElementById("apiBase");
+      const companyEl = document.getElementById("company");
+      const announcementEl = document.getElementById("announcement");
+      const styleEl = document.getElementById("style");
+      const voiceEl = document.getElementById("voice");
+      const btnGenerate = document.getElementById("btnGenerate");
+      const statusEl = document.getElementById("status");
+      const errorEl = document.getElementById("error");
+      const errorTextEl = document.getElementById("errorText");
+      const resultsEl = document.getElementById("results");
+      const releaseContentEl = document.getElementById("releaseContent");
+      const metadataEl = document.getElementById("metadata");
+      const btnCopy = document.getElementById("btnCopy");
+      const btnDownload = document.getElementById("btnDownload");
+
+      let lastPayload = null;
+
+      function setErr(msg) {
+        if (msg) {
+          errorTextEl.textContent = msg;
+          errorEl.classList.remove("hidden");
+        } else {
+          errorEl.classList.add("hidden");
+        }
+      }
+
+      function setStatus(msg) {
+        statusEl.textContent = msg;
+      }
+
+      btnGenerate.onclick = async () => {
+        setErr(""); setStatus("Generating press release…"); resultsEl.classList.add("hidden");
+        try {
+          if (!companyEl.value.trim()) throw new Error("Company name is required.");
+          if (!announcementEl.value.trim()) throw new Error("Announcement details are required.");
+
+          const res = await fetch(`${apiBaseEl.value}/api/generate-press-release`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              company: companyEl.value.trim(),
+              announcement: announcementEl.value.trim(),
+              style: styleEl.value,
+              voice_notes: voiceEl.value || ""
+            })
+          });
+          const text = await res.text();
+          if (!res.ok) throw new Error(text);
+          const json = JSON.parse(text);
+          lastPayload = json.result;
+          
+          releaseContentEl.textContent = json.result.content || "";
+          metadataEl.innerHTML = `<strong>Word Count:</strong> ${json.result.metadata?.word_count || "—"} | <strong>Style:</strong> ${json.result.metadata?.style || "—"}`;
+          resultsEl.classList.remove("hidden");
+          setStatus(`✅ Press release generated`);
+        } catch (e) {
+          setErr(String(e.message || e)); setStatus("");
+        }
+      };
+
+      btnCopy.onclick = () => {
+        if (!lastPayload?.content) return;
+        navigator.clipboard.writeText(lastPayload.content);
+        btnCopy.textContent = "Copied!";
+        setTimeout(() => { btnCopy.textContent = "Copy"; }, 2000);
+      };
+
+      btnDownload.onclick = () => {
+        if (!lastPayload?.content) return;
+        const blob = new Blob([lastPayload.content], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `press_release_${companyEl.value.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+    </script>
+  </div>
+</body>
+</html>
+

@@ -425,7 +425,129 @@ app.post("/api/lead-report", async (req, res) => {
   }
 });
 
+// --- Batch report proxy (Python API) ----------------------------------------
+app.post("/api/batch-report", async (req, res) => {
+  try {
+    const { leads, geo } = req.body;
+
+    if (!leads || !geo) {
+      return res.status(400).json({ error: "Missing leads or geo" });
+    }
+
+    // Call Python FastAPI backend on port 5057
+    const pythonApiBase = process.env.PYTHON_API_BASE || "http://localhost:5057";
+    const response = await fetch(`${pythonApiBase}/api/batch-report`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ leads, geo }),
+    });
+
+    const text = await response.text();
+    if (!response.ok) {
+      console.error("Python API error:", text);
+      return res.status(response.status).json({ error: "Batch report generation error", detail: text });
+    }
+
+    const data = JSON.parse(text);
+    res.json(data);
+  } catch (err) {
+    console.error("Batch report API error:", err);
+    res.status(500).json({ error: "Server error", detail: String(err?.message || err) });
+  }
+});
+
 // --- Start server ------------------------------------------------------------
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
+});
+
+// --- Press Release Generator API (OpenAI) -----------------------------------
+app.post("/api/generate-press-release", async (req, res) => {
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "Missing OPENAI_API_KEY" });
+    }
+
+    const { company, announcement, style, voice_notes } = req.body || {};
+    const chosenStyle = (style || "Journalistic").trim();
+    const voiceNotes = (voice_notes || "").trim();
+
+    const prompt = `Create a professional press release for ${company}.
+
+ANNOUNCEMENT:
+${announcement}
+
+STYLE: ${chosenStyle}
+${voiceNotes ? `VOICE NOTES: ${voiceNotes}` : ""}
+
+Guidelines:
+- Start with a compelling headline
+- Include a dateline (use today's date)
+- Write in third person
+- Include 2-3 quotes from company leadership
+- Add a boilerplate "About ${company}" section
+- Keep it between 300-500 words
+- Use professional but engaging language
+- Include a call-to-action or contact information
+
+Return ONLY valid JSON in exactly this format:
+{
+  "press_release": {
+    "headline": "Compelling headline",
+    "dateline": "CITY, STATE – Month Day, Year",
+    "content": "Full press release content",
+    "word_count": 350,
+    "style": "${chosenStyle}"
+  }
+}`;
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 2000,
+        temperature: 0.25,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      return res.status(response.status).json({ error: `OpenAI error: ${error}` });
+    }
+
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content || "";
+    
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch (e) {
+      return res.status(500).json({ error: "Invalid JSON response from OpenAI" });
+    }
+
+    if (!parsed || !parsed.press_release) {
+      return res.status(500).json({ error: "Invalid response structure from OpenAI" });
+    }
+
+    const result = {
+      content: parsed.press_release.content,
+      headline: parsed.press_release.headline,
+      dateline: parsed.press_release.dateline,
+      metadata: {
+        word_count: parsed.press_release.word_count,
+        style: parsed.press_release.style,
+      }
+    };
+
+    res.json({ result });
+  } catch (error) {
+    console.error("Press release generation error:", error);
+    res.status(500).json({ error: `Server error: ${error.message}` });
+  }
 });

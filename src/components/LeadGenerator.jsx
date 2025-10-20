@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Home, Users, Download, Play, Pause, RotateCcw, Loader2, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { Home, Users, Download, Play, Pause, RotateCcw, Loader2, AlertCircle, CheckCircle, Clock, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 
 function downloadCSV(filename, leads) {
@@ -22,6 +22,46 @@ function downloadCSV(filename, leads) {
 }
 
 export default function LeadGenerator() {
+
+  // Generate Batch Report for all leads
+  async function generateBatchReport() {
+    if (manualLeads.length === 0) {
+      alert("No leads to generate report for");
+      return;
+    }
+
+    setReportLoading("batch");
+    try {
+      const res = await fetch("/api/batch-report", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          leads: manualLeads,
+          geo: manualGeo
+        })
+      });
+
+      const text = await res.text();
+      if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
+      const json = JSON.parse(text);
+      const report = json?.content || "";
+      
+      // Save report and trigger download
+      const blob = new Blob([report], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `batch_report_${manualGeo.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.txt`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      
+      alert("✅ Batch report generated and downloaded!");
+    } catch (e) {
+      alert("Error generating batch report: " + String(e.message || e));
+    } finally {
+      setReportLoading(null);
+    }
+  }
+
   // Manual Run State
   const [manualGeo, setManualGeo] = useState("");
   const [manualIndustry, setManualIndustry] = useState("");
@@ -359,6 +399,23 @@ export default function LeadGenerator() {
                     >
                       <Download className="w-5 h-5" />
                       Download CSV
+                    </button>
+                    <button
+                      onClick={generateBatchReport}
+                      disabled={reportLoading === "batch" || manualLeads.length === 0}
+                      className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 disabled:bg-gray-600 text-white font-semibold flex items-center gap-2 transition"
+                    >
+                      {reportLoading === "batch" ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-5 h-5" />
+                          📄 Generate Batch Report
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
