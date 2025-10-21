@@ -9,7 +9,7 @@ Professional audit and content generation tools for C&L Strategy clients.
 - Secure password gate on site entry
 - Session-based authentication (lasts until browser closes)
 - Easy to customize password in `src/components/PasswordGate.jsx`
-- Default password: `GoBrowns333`
+- Default password: `ILoveTheBrowns333`
 
 ### 1. SEO/AEO Audit Tool
 - Technical SEO analysis from HTML source or URL
@@ -90,7 +90,7 @@ Then open your browser to: **http://localhost:5173/**
 
 ### Default Password
 
-The default password is: **`GoBrowns333`**
+The default password is: **`ILoveTheBrowns333`**
 
 To change the password, edit line 9 in `src/components/PasswordGate.jsx`:
 ```javascript

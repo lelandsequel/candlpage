@@ -6,7 +6,7 @@ export default function PasswordGate({ onAuthenticate }) {
   const [error, setError] = useState(false);
 
   // Change this password to whatever you want
-  const CORRECT_PASSWORD = 'GoBrowns333';
+  const CORRECT_PASSWORD = 'ILoveTheBrowns333';
 
   const handleSubmit = (e) => {
     e.preventDefault();
