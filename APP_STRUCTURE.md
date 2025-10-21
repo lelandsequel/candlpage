@@ -144,6 +144,72 @@ CandlPage is a professional audit and content generation suite built for C&L Str
 
 ---
 
+### Tool 4: Lead Generation
+**Component:** `src/components/LeadGenerator.jsx`
+**Endpoints:**
+- `POST /api/leads` - Find and score leads
+- `POST /api/lead-report` - Generate individual lead reports
+
+#### Functionality:
+- Discovers high-quality business leads in target markets
+- Scores leads based on SEO metrics and website quality
+- Generates detailed opportunity reports
+- Supports both manual and automated workflows
+
+#### Features:
+
+**Manual Mode:**
+- Search for leads in a single geography and industry
+- Specify maximum number of results
+- Real-time status tracking during search
+- Sort leads by score (highest to lowest)
+- View detailed lead information:
+  - Business name, website, phone, address
+  - SEO score (0-100)
+  - Key metrics (LCP, traffic trend, performance)
+  - Identified opportunities
+- Generate individual lead reports (1/2 page text files)
+- Export all leads to CSV format
+
+**Automated Mode:**
+- Run searches across multiple industries simultaneously
+- Staggered execution to avoid rate limiting
+- Batch download all reports
+- Scheduled execution (Monday 4am via `automation_scheduler.py`)
+- Email delivery of reports to configured recipients
+
+#### Lead Scoring Algorithm:
+Scores based on:
+1. **Traffic Trends** - Website traffic growth/decline
+2. **Schema Markup** - Presence of structured data
+3. **Content Freshness** - How recently content was updated
+4. **LCP (Largest Contentful Paint)** - Page load performance
+5. **Technical SEO** - Overall technical health
+
+#### Data Sources:
+- **Google Places API** - Real business data (name, address, phone, website)
+- **HTML Parsing** - Website analysis for SEO signals
+- **DataForSEO API** (optional) - Advanced SEO metrics
+- **Hunter.io API** (optional) - Email discovery
+
+#### Report Generation:
+- Generates 1/2 page text reports per lead
+- Includes:
+  - Business overview
+  - SEO analysis summary
+  - Key opportunities identified
+  - Urgency level (based on score)
+  - Recommended next steps
+
+#### Automation:
+- **Scheduler:** `automation_scheduler.py`
+- **Config:** `automation_config.json`
+- **Runs:** Every Monday at 4:00 AM (configurable)
+- **Email:** Sends reports to configured recipients
+- **Batch Processing:** Processes multiple searches with staggered timing
+
+---
+
 ## Backend Architecture
 
 ### Express Server (`server.js`)
@@ -155,6 +221,8 @@ CandlPage is a professional audit and content generation suite built for C&L Str
 - `POST /api/keywords` - OpenAI keyword generation
 - `POST /api/generate-press-release` - OpenAI press release generation
 - `POST /api/generate-article` - OpenAI article generation
+- `POST /api/leads` - Proxy to Python backend for lead finding and scoring
+- `POST /api/lead-report` - Proxy to Python backend for report generation
 - `GET *` - SPA fallback route for React Router
 
 #### Features:
@@ -166,15 +234,70 @@ CandlPage is a professional audit and content generation suite built for C&L Str
 
 ### Optional Python Backend (`python_api.py`)
 **Port:** 5057 (when running locally)
+**Framework:** FastAPI with Uvicorn
 
-#### Modules:
-- `lead_finder.py` - Google Places API integration
-- `seo_checks.py` - HTML parsing and SEO analysis
-- `scoring.py` - Lead scoring algorithms
-- `report_generator.py` - Google Docs integration
-- `industry_discovery.py` - Industry research
-- `llm_seo_analyzer.py` - LLM-based analysis
-- `sheets_io.py` - Google Sheets integration
+#### Key Endpoints:
+- `POST /find_leads` - Discover businesses using Google Places API
+- `POST /score_leads` - Score leads based on SEO metrics
+- `POST /generate_report` - Generate individual lead reports
+
+#### Core Modules:
+
+**`lead_finder.py`**
+- Google Places API integration
+- Searches for businesses by geography and industry
+- Extracts: name, address, phone, website, rating
+- Fallback to stub data if API unavailable
+- Email discovery via Hunter.io API (optional)
+
+**`seo_checks.py`**
+- HTML parsing and analysis
+- Detects SEO signals:
+  - Schema.org markup (Organization, LocalBusiness, etc.)
+  - Meta tags (title, description, viewport)
+  - Technical stack (CMS, frameworks, CDN)
+  - Content freshness (last modified dates)
+  - LCP (Largest Contentful Paint) estimation
+- DataForSEO API integration (optional)
+- Graceful fallback to HTML parsing
+
+**`scoring.py`**
+- Lead scoring algorithm (0-100)
+- Factors:
+  - Traffic trends (growth/decline)
+  - Schema markup presence
+  - Content freshness
+  - LCP performance
+  - Technical SEO health
+- Identifies specific opportunities per lead
+
+**`report_generator.py`**
+- Generates 1/2 page text reports
+- Google Docs API integration (optional)
+- Includes:
+  - Business overview
+  - SEO analysis summary
+  - Key opportunities
+  - Urgency level
+  - Recommended actions
+
+**`industry_discovery.py`**
+- Discovers relevant industries for target markets
+- Uses LLM analysis for industry classification
+
+**`llm_seo_analyzer.py`**
+- Claude AI integration for advanced analysis
+- Generates insights and recommendations
+- Analyzes competitor content
+
+**`sheets_io.py`**
+- Google Sheets API integration
+- Stores lead data and reports
+- Enables data sharing and collaboration
+
+**`alerts.py`**
+- Alert system for high-opportunity leads
+- Notification triggers based on score thresholds
 
 ---
 
@@ -182,17 +305,51 @@ CandlPage is a professional audit and content generation suite built for C&L Str
 
 ### Required:
 ```
-ANTHROPIC_API_KEY=sk-...          # Claude AI access
-OPENAI_API_KEY=sk-...             # GPT-4o access
+ANTHROPIC_API_KEY=sk-...          # Claude AI access (SEO/AEO/Security analysis)
+OPENAI_API_KEY=sk-...             # GPT-4o access (keywords, articles, press releases)
 ```
 
-### Optional:
+### Optional (Lead Generation):
 ```
-GOOGLE_PLACES_API_KEY=...         # For lead generation
-HUNTER_API_KEY=...                # For email finding
-DATAFORSEO_LOGIN=...              # For SEO metrics
-DATAFORSEO_PASSWORD=...           # For SEO metrics
-PORT=3001                         # Server port
+GOOGLE_PLACES_API_KEY=...         # Google Places API for business discovery
+HUNTER_API_KEY=...                # Hunter.io for email discovery
+DATAFORSEO_LOGIN=...              # DataForSEO email for advanced SEO metrics
+DATAFORSEO_PASSWORD=...           # DataForSEO password
+GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON_PATH=./secrets/google-service-account.json
+GMAIL_APP_PASSWORD=...            # Gmail app password for automated email delivery
+```
+
+### Configuration:
+```
+PORT=3001                         # Express server port
+PYTHON_API_BASE=http://localhost:5057  # Python backend URL
+```
+
+### Automation Config (`automation_config.json`):
+```json
+{
+  "email": {
+    "to": ["recipient@example.com"],
+    "from": "sender@example.com",
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "use_tls": true,
+    "password_env_var": "GMAIL_APP_PASSWORD"
+  },
+  "schedule": {
+    "day": "monday",
+    "hour": 4,
+    "minute": 0,
+    "timezone": "America/Chicago"
+  },
+  "searches": [
+    {
+      "geo": "Miami, FL",
+      "industry": "landscaping",
+      "max_results": 20
+    }
+  ]
+}
 ```
 
 ---
@@ -203,21 +360,36 @@ PORT=3001                         # Server port
 candlpage/
 ├── src/
 │   ├── components/
-│   │   ├── PasswordGate.jsx          # Authentication
-│   │   ├── SeoAeoAudit.jsx           # SEO/AEO tool
-│   │   ├── SecurityScanner.jsx       # Security audit
-│   │   └── ContentSuite.jsx          # Content generation
-│   ├── App.jsx                       # Main router
+│   │   ├── PasswordGate.jsx          # Authentication gate
+│   │   ├── SeoAeoAudit.jsx           # SEO/AEO analysis tool
+│   │   ├── SecurityScanner.jsx       # Security audit tool
+│   │   ├── ContentSuite.jsx          # Content generation suite
+│   │   └── LeadGenerator.jsx         # Lead discovery & scoring
+│   ├── App.jsx                       # Main router & landing page
 │   ├── index.css                     # Tailwind styles
-│   └── main.jsx                      # React entry
-├── server.js                         # Express backend
-├── python_api.py                     # FastAPI backend (optional)
-├── python_modules/                   # Python utilities
+│   └── main.jsx                      # React entry point
+├── server.js                         # Express backend (port 3001)
+├── python_api.py                     # FastAPI backend (port 5057)
+├── python_modules/
+│   ├── lead_finder.py                # Google Places integration
+│   ├── seo_checks.py                 # HTML parsing & SEO analysis
+│   ├── scoring.py                    # Lead scoring algorithm
+│   ├── report_generator.py           # Report generation
+│   ├── industry_discovery.py         # Industry research
+│   ├── llm_seo_analyzer.py           # LLM-based analysis
+│   ├── sheets_io.py                  # Google Sheets integration
+│   └── alerts.py                     # Alert system
+├── automation_scheduler.py           # Monday morning automation
+├── automation_config.json            # Automation configuration
 ├── package.json                      # Node dependencies
 ├── requirements.txt                  # Python dependencies
 ├── vite.config.js                    # Vite configuration
 ├── tailwind.config.js                # Tailwind configuration
-└── README.md                         # Documentation
+├── Procfile                          # Railway deployment config
+├── railway.json                      # Railway settings
+├── vercel.json                       # Vercel deployment config
+├── APP_STRUCTURE.md                  # This documentation
+└── README.md                         # Main documentation
 ```
 
 ---
@@ -225,22 +397,48 @@ candlpage/
 ## Deployment
 
 ### Local Development
+
+**Quick Start (All Services):**
 ```bash
-# Terminal 1: Frontend
-npm run dev
+# macOS
+./Start-Dev.command
 
-# Terminal 2: Backend
-node server.js
-
-# Terminal 3 (optional): Python backend
-python3 python_api.py
+# Linux/Windows
+bash start-dev.sh
 ```
 
-### Production (Railway)
-- Automatic deployment from GitHub
+**Manual Setup:**
+```bash
+# Terminal 1: Frontend (Vite dev server on port 5174)
+npm run dev
+
+# Terminal 2: Express backend (port 3001)
+node server.js
+
+# Terminal 3 (optional): Python backend (port 5057)
+python3 python_api.py
+
+# Terminal 4 (optional): Automation scheduler
+python3 automation_scheduler.py
+```
+
+### Production Deployment
+
+**Railway (Recommended):**
+- Automatic deployment from GitHub (`lelandsequel/candlpage`)
 - Build: `npm run build`
 - Start: `node server.js`
 - Environment variables configured in Railway dashboard
+- Note: Python backend requires separate Railway service on port 5057
+
+**Vercel:**
+- Configured via `vercel.json`
+- Frontend + Express backend
+- Python backend not supported (use Railway for Python)
+
+**Docker:**
+- Can containerize both Node and Python services
+- Use `docker-compose` for local multi-service setup
 
 ---
 
@@ -264,12 +462,36 @@ python3 python_api.py
 
 ---
 
+## Known Issues & Limitations
+
+### Lead Generation Tool
+- **Status:** Currently removed from UI due to timeout issues
+- **Issue:** DataForSEO API 404 errors and slow PageSpeed API calls (60+ seconds per lead)
+- **Workaround:** Can be re-enabled with:
+  - Faster SEO data source (Ahrefs, Semrush API)
+  - Caching layer for repeated analyses
+  - Async job queue for batch processing
+  - Increased timeout thresholds (120+ seconds)
+
+### Python Backend
+- Requires separate service running on port 5057
+- Not deployable to Vercel (Node.js only)
+- Requires additional environment variables for full functionality
+
+---
+
 ## Future Enhancements
 
-- [ ] Lead Generation Tool (currently removed due to timeout issues)
+- [ ] Lead Generation Tool - Re-enable with improved performance
 - [ ] Real-time collaboration features
 - [ ] Advanced analytics dashboard
 - [ ] Custom report templates
 - [ ] API rate limiting and usage tracking
 - [ ] Multi-user support with role-based access
+- [ ] Webhook integrations (Slack, Discord, email)
+- [ ] Scheduled report delivery
+- [ ] Lead CRM integration (HubSpot, Salesforce)
+- [ ] Competitor analysis tool
+- [ ] Backlink analysis tool
+- [ ] Content calendar management
 
